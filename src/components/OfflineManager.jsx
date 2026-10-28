@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, LinearProgress, Typography, Chip } from '@mui/material';
+import { Box, Button, LinearProgress, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -68,7 +68,7 @@ export default function OfflineManager({ reciter, surah }) {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
       <Button
         variant={done ? 'contained' : 'outlined'}
         size="large"
@@ -76,39 +76,63 @@ export default function OfflineManager({ reciter, surah }) {
         onClick={handleCache}
         disabled={!ready || downloading || done}
         color={done ? 'success' : 'primary'}
-        sx={{ minHeight: 56, fontSize: '1rem', fontWeight: 600 }}
+        sx={{
+          minHeight: 56, fontSize: '0.95rem', fontWeight: 700,
+          borderWidth: done ? 0 : 1.5,
+          '&:hover': { borderWidth: done ? 0 : 1.5 },
+          textAlign: 'start',
+          justifyContent: 'flex-start',
+          px: 2,
+        }}
       >
         {done
-          ? `تم حفظ السورة كاملة (${total} آية)`
+          ? `تم حفظ السورة كاملةً (${total} آية)`
           : downloading
-          ? `جارٍ التحميل... ${progress}%`
+          ? `جارٍ التحميل · ${progress}%`
           : partial
-          ? `إكمال التحميل (${cachedCount}/${total} آية محفوظة)`
+          ? `إكمال التحميل · ${cachedCount}/${total} آية`
           : ready
-          ? `تحميل كامل السورة (${total} آية) للاستماع بدون إنترنت`
+          ? `تحميل السورة كاملةً (${total} آية)`
           : 'تحميل السورة للاستماع بدون إنترنت'}
       </Button>
 
       {downloading && (
-        <Box>
-          <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4 }} />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, textAlign: 'center' }}>
-            {Math.round(progress * total / 100)} / {total} آيات محفوظة
+        <Box sx={{ px: 0.5 }}>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{
+              height: 6, borderRadius: 999,
+              bgcolor: 'action.hover',
+              '& .MuiLinearProgress-bar': { borderRadius: 999 },
+            }}
+          />
+          <Typography sx={{
+            mt: 0.5, textAlign: 'center',
+            fontSize: '0.75rem', fontWeight: 500,
+            color: 'text.secondary', fontVariantNumeric: 'tabular-nums',
+          }}>
+            {Math.round(progress * total / 100)} / {total} آية
           </Typography>
         </Box>
       )}
 
       {error && (
-        <Typography color="error" variant="body2">{error}</Typography>
+        <Typography color="error" variant="body2" sx={{ fontSize: '0.85rem' }}>{error}</Typography>
       )}
 
       {!navigator.onLine && (
-        <Chip
-          icon={<WifiOffIcon />}
-          label="غير متصل — يتم تشغيل الصوت المحفوظ"
-          color="warning"
-          sx={{ fontSize: '0.9rem', height: 36 }}
-        />
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1,
+          px: 1.5, py: 0.9, borderRadius: 2,
+          bgcolor: 'warning.light', color: 'warning.dark',
+          border: '1px solid', borderColor: 'warning.main',
+        }}>
+          <WifiOffIcon sx={{ fontSize: 17 }} />
+          <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>
+            غير متصل · يتم تشغيل الصوت المحفوظ
+          </Typography>
+        </Box>
       )}
     </Box>
   );

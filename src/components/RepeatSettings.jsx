@@ -1,57 +1,103 @@
-import { Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, ButtonBase } from '@mui/material';
+import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 
-const VERSE_OPTIONS = [1, 2, 3, 5, 10];
-const GROUP_OPTIONS = [
-  { value: 1, label: 'مرة واحدة' },
-  { value: 2, label: 'مرتان' },
-  { value: 3, label: '3 مرات' },
-  { value: 5, label: '5 مرات' },
-  { value: 10, label: '10 مرات' },
-  { value: 0, label: '∞ بشكل مستمر' },
+const VERSE_OPTIONS = [
+  { value: 1, label: '×1' },
+  { value: 2, label: '×2' },
+  { value: 3, label: '×3' },
+  { value: 5, label: '×5' },
+  { value: 10, label: '×10' },
 ];
 
-const VERSE_LABELS = {
-  1: 'مرة واحدة',
-  2: 'مرتان',
-  3: '3 مرات',
-  5: '5 مرات',
-  10: '10 مرات',
-};
+const GROUP_OPTIONS = [
+  { value: 1, label: '×1' },
+  { value: 2, label: '×2' },
+  { value: 3, label: '×3' },
+  { value: 5, label: '×5' },
+  { value: 10, label: '×10' },
+  { value: 0, label: null, icon: true },
+];
+
+function PillRow({ options, value, onChange, ariaLabel }) {
+  return (
+    <Box
+      role="radiogroup"
+      aria-label={ariaLabel}
+      sx={(theme) => ({
+        display: 'grid',
+        gridTemplateColumns: `repeat(${options.length}, 1fr)`,
+        gap: 0.5, p: 0.5,
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+        borderRadius: 999,
+      })}
+    >
+      {options.map((opt) => {
+        const active = value === opt.value;
+        return (
+          <ButtonBase
+            key={opt.value}
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(opt.value)}
+            sx={(theme) => ({
+              minHeight: 42, borderRadius: 999,
+              fontSize: '0.9rem', fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              color: active ? theme.palette.primary.contrastText : theme.palette.text.secondary,
+              bgcolor: active ? 'primary.main' : 'transparent',
+              boxShadow: active
+                ? (theme.palette.mode === 'dark'
+                    ? '0 2px 6px rgba(0,0,0,0.4)'
+                    : '0 2px 6px rgba(0,77,64,0.22)')
+                : 'none',
+              transition: 'background-color 0.2s, color 0.2s, box-shadow 0.2s',
+              '&:hover': { color: active ? 'inherit' : theme.palette.text.primary },
+            })}
+          >
+            {opt.icon ? <AllInclusiveIcon sx={{ fontSize: 20 }} /> : opt.label}
+          </ButtonBase>
+        );
+      })}
+    </Box>
+  );
+}
 
 export default function RepeatSettings({ verseRepeat, groupRepeat, onVerseRepeatChange, onGroupRepeatChange }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <FormControl fullWidth>
-        <InputLabel sx={{ fontSize: '1.1rem' }}>تكرار كل آية</InputLabel>
-        <Select
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <Box>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 1 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
+            تكرار كل آية
+          </Typography>
+          <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+            عدد مرات إعادة الآية الواحدة قبل الانتقال
+          </Typography>
+        </Box>
+        <PillRow
+          options={VERSE_OPTIONS}
           value={verseRepeat}
-          label="تكرار كل آية"
-          onChange={(e) => onVerseRepeatChange(e.target.value)}
-          sx={{ fontSize: '1.1rem', minHeight: 56 }}
-        >
-          {VERSE_OPTIONS.map((v) => (
-            <MenuItem key={v} value={v} sx={{ fontSize: '1.15rem', py: 1.3 }}>
-              {VERSE_LABELS[v]}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          onChange={onVerseRepeatChange}
+          ariaLabel="تكرار كل آية"
+        />
+      </Box>
 
-      <FormControl fullWidth>
-        <InputLabel sx={{ fontSize: '1.1rem' }}>تكرار المجموعة كاملة</InputLabel>
-        <Select
+      <Box>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 1 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
+            تكرار المجموعة
+          </Typography>
+          <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+            النطاق كاملاً من البداية
+          </Typography>
+        </Box>
+        <PillRow
+          options={GROUP_OPTIONS}
           value={groupRepeat}
-          label="تكرار المجموعة كاملة"
-          onChange={(e) => onGroupRepeatChange(e.target.value)}
-          sx={{ fontSize: '1.1rem', minHeight: 56 }}
-        >
-          {GROUP_OPTIONS.map((opt) => (
-            <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: '1.15rem', py: 1.3 }}>
-              {opt.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          onChange={onGroupRepeatChange}
+          ariaLabel="تكرار المجموعة"
+        />
+      </Box>
     </Box>
   );
 }

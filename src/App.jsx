@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
+import { ColorModeContext } from './main.jsx';
 import {
   AppBar, Toolbar, Typography, Container, Box, Paper,
   CircularProgress, Alert, Tabs, Tab, IconButton, Tooltip,
 } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
+import DarkModeIcon from '@mui/icons-material/DarkModeOutlined';
+import LightModeIcon from '@mui/icons-material/LightModeOutlined';
 import MicIcon from '@mui/icons-material/Mic';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import RepeatIcon from '@mui/icons-material/Repeat';
@@ -34,6 +37,7 @@ function saveSession(data) {
 }
 
 export default function App() {
+  const colorMode = useContext(ColorModeContext);
   const [surahs, setSurahs] = useState([]);
   const [reciters, setReciters] = useState([]);
   const [loadingSurahs, setLoadingSurahs] = useState(true);
@@ -172,27 +176,45 @@ export default function App() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'primary.main' }}>
-        <Toolbar>
-          <MenuBookIcon sx={{ ml: 1.5, fontSize: 28 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1, letterSpacing: 0.5 }}>
-            حفظ القرآن الكريم
-          </Typography>
+      <AppBar position="sticky" elevation={0}>
+        <Toolbar sx={{ gap: 1 }}>
+          <Box sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, height: 36, borderRadius: 2,
+            bgcolor: 'rgba(255,255,255,0.08)',
+          }}>
+            <MenuBookIcon sx={{ fontSize: 20 }} />
+          </Box>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', lineHeight: 1.15, letterSpacing: '0.01em' }}>
+              حفظ القرآن الكريم
+            </Typography>
+            <Typography sx={{
+              fontFamily: '"Noto Naskh Arabic", serif',
+              opacity: 0.72, fontSize: '0.78rem', lineHeight: 1.2,
+            }}>
+              بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={colorMode.toggle}
+            sx={{ color: 'inherit' }}
+            aria-label={colorMode.mode === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
+          >
+            {colorMode.mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
+          </IconButton>
           <Tooltip
             open={hintOpen}
             onClose={dismissHint}
             title="اضغط هنا لمعرفة كيفية استخدام التطبيق"
             arrow
             placement="bottom"
-            PopperProps={{ sx: { '& .MuiTooltip-tooltip': { fontSize: '0.85rem', bgcolor: 'secondary.main' }, '& .MuiTooltip-arrow': { color: 'secondary.main' } } }}
+            PopperProps={{ sx: { '& .MuiTooltip-tooltip': { fontSize: '0.82rem', bgcolor: 'secondary.main' }, '& .MuiTooltip-arrow': { color: 'secondary.main' } } }}
           >
-            <IconButton onClick={openHelp} sx={{ color: 'inherit', mr: 0.5 }} aria-label="المساعدة">
+            <IconButton onClick={openHelp} sx={{ color: 'inherit' }} aria-label="المساعدة">
               <HelpOutlineIcon />
             </IconButton>
           </Tooltip>
-          <Typography variant="body1" sx={{ opacity: 0.85, fontFamily: '"Noto Naskh Arabic", serif', fontSize: '1.1rem' }}>
-            بِسْمِ اللَّهِ
-          </Typography>
         </Toolbar>
       </AppBar>
 
@@ -244,8 +266,20 @@ export default function App() {
                 onChange={(_, v) => setTab(v)}
                 variant="fullWidth"
                 sx={{
-                  '& .MuiTab-root': { fontSize: '0.78rem', minHeight: 56, gap: 0.5 },
-                  '& .MuiTabs-indicator': { height: 3, borderRadius: 2 },
+                  minHeight: 60,
+                  '& .MuiTab-root': {
+                    fontSize: '0.78rem',
+                    minHeight: 60,
+                    gap: 0.4,
+                    color: 'text.secondary',
+                    transition: 'color 0.2s, background-color 0.2s',
+                    '&.Mui-selected': { color: 'primary.main' },
+                    '&:hover:not(.Mui-selected)': { color: 'text.primary', bgcolor: 'action.hover' },
+                  },
+                  '& .MuiTabs-indicator': {
+                    height: 3, borderRadius: '2px 2px 0 0',
+                    bgcolor: 'primary.main',
+                  },
                 }}
               >
                 {TABS.map((t, i) => (

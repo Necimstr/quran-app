@@ -198,7 +198,7 @@ export default function HelpDialog({ open, onClose }) {
                 {s.image && (
                   <Box sx={{
                     display: 'flex', justifyContent: 'center', mb: 2,
-                    bgcolor: 'grey.100', borderRadius: 2, p: 1.5,
+                    bgcolor: 'action.hover', borderRadius: 2, p: 1.5,
                   }}>
                     <Box
                       component="img"

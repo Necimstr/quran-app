@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Box, TextField, List, ListItemButton, ListItemText,
+  Box, TextField, ListItemButton,
   IconButton, Typography, Divider, CircularProgress, InputAdornment,
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
@@ -82,16 +82,20 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
       />
 
       <Box sx={{
-        maxHeight: 280, overflowY: 'auto', border: '1px solid',
+        maxHeight: 320, overflowY: 'auto', border: '1px solid',
         borderColor: 'divider', borderRadius: 2,
+        bgcolor: 'background.paper',
       }}>
         {starred.length > 0 && !search && (
-          <>
-            <Typography variant="caption" sx={{ px: 2, py: 0.5, display: 'block', color: 'text.secondary', bgcolor: 'grey.50' }}>
-              ★ المفضّلة
-            </Typography>
-            <Divider />
-          </>
+          <Typography variant="caption" sx={{
+            px: 2, py: 0.75, display: 'block',
+            color: 'text.secondary', fontWeight: 700, fontSize: '0.68rem',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            borderBottom: '1px solid', borderColor: 'divider',
+            bgcolor: 'action.hover',
+          }}>
+            المفضّلة
+          </Typography>
         )}
         {sorted.length === 0 ? (
           <Typography sx={{ p: 2, color: 'text.secondary', textAlign: 'center' }}>
@@ -115,35 +119,55 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
                   onClick={() => onChange(r)}
                   disabled={disabled}
                   sx={{
-                    py: 1.2, gap: 1,
+                    py: 1.1, gap: 1,
                     opacity: disabled ? 0.45 : 1,
+                    borderInlineStart: '3px solid transparent',
+                    '&.Mui-selected': {
+                      bgcolor: 'action.selected',
+                      borderInlineStartColor: 'primary.main',
+                    },
+                    '&.Mui-selected:hover': { bgcolor: 'action.selected' },
                     '&.Mui-disabled': { cursor: 'not-allowed' },
                   }}
                 >
                   <IconButton
                     size="small"
                     onClick={(e) => toggleStar(e, r.id)}
+                    aria-label={isStarred ? 'إزالة من المفضّلة' : 'إضافة إلى المفضّلة'}
                     sx={{ color: isStarred ? 'warning.main' : 'action.disabled', p: 0.5 }}
                   >
                     {isStarred ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
                   </IconButton>
-                  <ListItemText
-                    primary={r.name}
-                    secondary={r.qiraa ? (
+                  <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography sx={{
+                      fontSize: '0.98rem',
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? 'primary.main' : 'text.primary',
+                      lineHeight: 1.3,
+                    }}>
+                      {r.name}
+                    </Typography>
+                    {r.qiraa && (
                       <Chip
                         label={r.qiraa}
                         size="small"
                         color={QIRAA_COLORS[r.qiraa] || 'default'}
-                        sx={{ height: 18, fontSize: '0.68rem', mt: 0.3 }}
+                        variant={QIRAA_COLORS[r.qiraa] === 'default' ? 'outlined' : 'filled'}
+                        sx={{
+                          height: 18, fontSize: '0.65rem', fontWeight: 500,
+                          '& .MuiChip-label': { px: 0.9 },
+                          ...(QIRAA_COLORS[r.qiraa] === 'default' && {
+                            borderColor: 'divider',
+                            color: 'text.secondary',
+                          }),
+                        }}
                       />
-                    ) : null}
-                    primaryTypographyProps={{ fontSize: '1rem', fontWeight: isSelected ? 700 : 400 }}
-                    secondaryTypographyProps={{ component: 'div' }}
-                  />
+                    )}
+                  </Box>
                   {hasCache ? (
-                    <DownloadDoneIcon sx={{ fontSize: 18, color: 'success.main', opacity: 0.9 }} />
+                    <DownloadDoneIcon sx={{ fontSize: 17, color: 'success.main', opacity: 0.85, flexShrink: 0 }} />
                   ) : offline ? (
-                    <CloudOffIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+                    <CloudOffIcon sx={{ fontSize: 17, color: 'text.disabled', flexShrink: 0 }} />
                   ) : null}
                 </ListItemButton>
               </Box>
@@ -153,9 +177,34 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
       </Box>
 
       {value && (
-        <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-          المختار: {value.name}
-        </Typography>
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
+          px: 1.25, py: 0.75, borderRadius: 2,
+          bgcolor: 'action.hover',
+        }}>
+          <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500 }}>
+            المختار
+          </Typography>
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'primary.main' }}>
+            {value.name}
+          </Typography>
+          {value.qiraa && (
+            <Chip
+              label={value.qiraa}
+              size="small"
+              color={QIRAA_COLORS[value.qiraa] || 'default'}
+              variant={QIRAA_COLORS[value.qiraa] === 'default' ? 'outlined' : 'filled'}
+              sx={{
+                height: 18, fontSize: '0.65rem',
+                '& .MuiChip-label': { px: 0.9 },
+                ...(QIRAA_COLORS[value.qiraa] === 'default' && {
+                  borderColor: 'divider',
+                  color: 'text.secondary',
+                }),
+              }}
+            />
+          )}
+        </Box>
       )}
     </Box>
   );

@@ -5,7 +5,6 @@ import {
   MenuItem,
   Box,
   Typography,
-  Chip,
 } from "@mui/material";
 import WifiOffIcon from "@mui/icons-material/WifiOff";
 import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
@@ -30,16 +29,22 @@ export default function RangeSelector({
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {offline && (
-        <Chip
-          icon={<WifiOffIcon />}
-          label={
-            cachedSurahs?.size
-              ? `غير متصل — ${cachedSurahs.size} سورة محفوظة متاحة`
-              : "غير متصل — لا توجد آيات محفوظة لهذه السورة"
-          }
-          color={cachedVerses?.size ? "warning" : "error"}
-          sx={{ fontSize: "0.9rem", height: 36, alignSelf: "flex-start" }}
-        />
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1.25,
+          px: 1.5, py: 1, borderRadius: 2,
+          bgcolor: cachedSurahs?.size ? 'warning.light' : 'error.light',
+          color: cachedSurahs?.size ? 'warning.dark' : 'error.dark',
+          border: '1px solid',
+          borderColor: cachedSurahs?.size ? 'warning.main' : 'error.main',
+          opacity: 0.95,
+        }}>
+          <WifiOffIcon sx={{ fontSize: 18, flexShrink: 0 }} />
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>
+            {cachedSurahs?.size
+              ? `غير متصل · ${cachedSurahs.size} سورة محفوظة متاحة`
+              : 'غير متصل · لا توجد سور محفوظة لهذا القارئ'}
+          </Typography>
+        </Box>
       )}
 
       <FormControl fullWidth>

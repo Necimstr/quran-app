@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Box, Button, IconButton, Typography, Chip, Stack,
+  Box, Button, IconButton, Typography, Stack,
   TextField, Collapse,
 } from '@mui/material';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
@@ -57,9 +57,13 @@ export default function BookmarkManager({ reciter, surah, startVerse, endVerse, 
         startIcon={<BookmarkAddIcon />}
         onClick={() => { setAdding((v) => !v); setName(''); }}
         disabled={!surah || !reciter}
-        sx={{ minHeight: 48, fontSize: '0.95rem' }}
+        sx={{
+          minHeight: 52, fontSize: '0.9rem', fontWeight: 700,
+          borderWidth: 1.5, '&:hover': { borderWidth: 1.5 },
+          justifyContent: 'flex-start', textAlign: 'start', px: 2,
+        }}
       >
-        حفظ الإعدادات الحالية كإشارة مرجعية
+        حفظ الإعدادات الحالية
       </Button>
 
       <Collapse in={adding}>
@@ -80,7 +84,7 @@ export default function BookmarkManager({ reciter, surah, startVerse, endVerse, 
       </Collapse>
 
       {bookmarks.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
+        <Typography sx={{ textAlign: 'center', py: 1.5, color: 'text.secondary', fontSize: '0.85rem', fontStyle: 'italic' }}>
           لا توجد إشارات مرجعية محفوظة
         </Typography>
       ) : (
@@ -88,27 +92,43 @@ export default function BookmarkManager({ reciter, surah, startVerse, endVerse, 
           {bookmarks.map((bm) => (
             <Box
               key={bm.id}
-              sx={{
-                display: 'flex', alignItems: 'center', gap: 1,
-                border: '1px solid', borderColor: 'divider',
-                borderRadius: 2, p: 1.2, cursor: 'pointer',
-                '&:hover': { bgcolor: 'action.hover' },
-              }}
+              role="button"
+              tabIndex={0}
               onClick={() => onLoad(bm)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onLoad(bm)}
+              sx={{
+                display: 'flex', alignItems: 'center', gap: 1.25,
+                border: '1px solid', borderColor: 'divider',
+                borderRadius: 2, p: 1.25, cursor: 'pointer',
+                borderInlineStart: '3px solid transparent',
+                transition: 'border-color 0.15s, background-color 0.15s, transform 0.15s',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                  borderInlineStartColor: 'primary.main',
+                },
+                '&:active': { transform: 'scale(0.995)' },
+              }}
             >
               <BookmarkIcon sx={{ color: 'primary.main', fontSize: 20, flexShrink: 0 }} />
               <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                <Typography sx={{
+                  fontSize: '0.9rem', fontWeight: 700, lineHeight: 1.3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
                   {bm.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 500 }}>
                   {bm.reciterName}
                 </Typography>
               </Box>
               <IconButton
                 size="small"
+                aria-label="حذف الإشارة المرجعية"
                 onClick={(e) => { e.stopPropagation(); handleDelete(bm.id); }}
-                sx={{ color: 'error.main' }}
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': { color: 'error.main', bgcolor: 'error.light' },
+                }}
               >
                 <DeleteIcon fontSize="small" />
               </IconButton>
