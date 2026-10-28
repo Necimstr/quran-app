@@ -43,5 +43,9 @@ export function getAyahAudioUrl(reciter, surahNumber, ayahNumber) {
   return `${EVERYAYAH_BASE}/${reciter.id}/${surah}${ayah}.mp3`;
 }
 
-// kept for OfflineManager compatibility — not needed with EveryAyah
-export function getGlobalAyahNumber() { return null; }
+export async function fetchSurahAyahs(surahNumber) {
+  const res = await fetch(`${ALQURAN_BASE}/surah/${surahNumber}`);
+  if (!res.ok) throw new Error('Failed to fetch surah text');
+  const data = await res.json();
+  return data.data.ayahs.map((a) => ({ number: a.numberInSurah, text: a.text }));
+}

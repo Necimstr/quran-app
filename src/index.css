@@ -6,4 +6,10 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: lining-nums;
+}
+
+/* Force Western digits even inside Arabic font */
+* {
+  font-feature-settings: "lnum" 1;
 }

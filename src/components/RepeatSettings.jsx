@@ -4,18 +4,18 @@ const VERSE_OPTIONS = [1, 2, 3, 5, 10];
 const GROUP_OPTIONS = [
   { value: 1, label: 'مرة واحدة' },
   { value: 2, label: 'مرتان' },
-  { value: 3, label: '٣ مرات' },
-  { value: 5, label: '٥ مرات' },
-  { value: 10, label: '١٠ مرات' },
+  { value: 3, label: '3 مرات' },
+  { value: 5, label: '5 مرات' },
+  { value: 10, label: '10 مرات' },
   { value: 0, label: '∞ بشكل مستمر' },
 ];
 
 const VERSE_LABELS = {
   1: 'مرة واحدة',
   2: 'مرتان',
-  3: '٣ مرات',
-  5: '٥ مرات',
-  10: '١٠ مرات',
+  3: '3 مرات',
+  5: '5 مرات',
+  10: '10 مرات',
 };
 
 export default function RepeatSettings({ verseRepeat, groupRepeat, onVerseRepeatChange, onGroupRepeatChange }) {

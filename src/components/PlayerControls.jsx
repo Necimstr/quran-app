@@ -1,7 +1,13 @@
-import { Box, IconButton, Slider, Typography, CircularProgress, Chip, Stack } from '@mui/material';
+import { Box, IconButton, Slider, Typography, CircularProgress, Chip, Stack, Tooltip } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import StopIcon from '@mui/icons-material/Stop';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
+import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5];
+const SPEED_LABELS = { 0.5: '0.5×', 0.75: '0.75×', 1: '1×', 1.25: '1.25×', 1.5: '1.5×' };
 
 function formatTime(s) {
   if (!s || isNaN(s)) return '0:00';
@@ -13,51 +19,62 @@ function formatTime(s) {
 export default function PlayerControls({
   isPlaying, currentVerse, verseCount, groupCount,
   verseRepeat, groupRepeat, surah, startVerse, endVerse,
-  progress, duration, loading, error,
+  progress, duration, loading, error, verseText,
+  speed, volume,
   onPlay, onPause, onResume, onStop, onSeek,
+  onSkipNext, onSkipPrev, onSpeedChange, onVolumeChange,
 }) {
   const ready = !!surah;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Current verse indicator */}
+
+      {/* Verse display card */}
       <Box sx={{
         bgcolor: 'primary.main', color: 'primary.contrastText',
         borderRadius: 3, p: 2.5, textAlign: 'center',
-        minHeight: 80, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
+        minHeight: 90, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 1,
       }}>
         {isPlaying || loading ? (
           <>
-            <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.4 }}>
+            <Typography variant="subtitle2" sx={{ opacity: 0.85 }}>
               سورة {surah?.name} — الآية {currentVerse}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" justifyContent="center">
+            {verseText ? (
+              <Typography sx={{
+                fontFamily: '"Noto Naskh Arabic", serif',
+                fontSize: '1.3rem', lineHeight: 2, fontWeight: 600,
+              }}>
+                {verseText}
+              </Typography>
+            ) : null}
+            <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
               <Chip
                 label={`تكرار الآية: ${verseCount + 1}/${verseRepeat}`}
                 size="small"
-                sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'inherit', fontSize: '0.85rem' }}
+                sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'inherit', fontSize: '0.8rem', fontFamily: 'inherit' }}
               />
               <Chip
-                label={groupRepeat === 0 ? 'تكرار المجموعة: ∞' : `تكرار المجموعة: ${groupCount + 1}/${groupRepeat}`}
+                label={groupRepeat === 0 ? 'تكرار: ∞' : `تكرار المجموعة: ${groupCount + 1}/${groupRepeat}`}
                 size="small"
-                sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'inherit', fontSize: '0.85rem' }}
+                sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'inherit', fontSize: '0.8rem', fontFamily: 'inherit' }}
               />
             </Stack>
           </>
         ) : (
-          <Typography variant="h6" sx={{ opacity: 0.85, lineHeight: 1.5 }}>
+          <Typography variant="h6" sx={{ opacity: 0.85, lineHeight: 1.6 }}>
             {ready ? `سورة ${surah.name} · الآيات ${startVerse}–${endVerse}` : 'اختر السورة للبدء'}
           </Typography>
         )}
       </Box>
 
       {error && (
-        <Typography color="error" sx={{ textAlign: 'center', fontSize: '0.95rem' }}>{error}</Typography>
+        <Typography color="error" sx={{ textAlign: 'center', fontSize: '0.9rem' }}>{error}</Typography>
       )}
 
       {/* Progress slider */}
-      <Box sx={{ px: 1 }}>
+      <Box sx={{ px: 0.5 }}>
         <Slider
           value={progress}
           max={duration || 1}
@@ -65,20 +82,42 @@ export default function PlayerControls({
           disabled={!isPlaying && !progress}
           sx={{ height: 6, '& .MuiSlider-thumb': { width: 20, height: 20 } }}
         />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="body2" color="text.secondary">{formatTime(progress)}</Typography>
-          <Typography variant="body2" color="text.secondary">{formatTime(duration)}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: -0.5 }}>
+          <Typography variant="caption" color="text.secondary">{formatTime(progress)}</Typography>
+          <Typography variant="caption" color="text.secondary">{formatTime(duration)}</Typography>
         </Box>
       </Box>
 
-      {/* Control buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
+      {/* Speed buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+        {SPEEDS.map((s) => (
+          <Chip
+            key={s}
+            label={SPEED_LABELS[s]}
+            onClick={() => onSpeedChange(s)}
+            variant={speed === s ? 'filled' : 'outlined'}
+            color={speed === s ? 'primary' : 'default'}
+            sx={{ fontSize: '0.9rem', fontWeight: 600, minWidth: 52 }}
+          />
+        ))}
+      </Box>
+
+      {/* Main controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1.5 }}>
         <IconButton
           onClick={onStop}
           disabled={!isPlaying && !progress}
-          sx={{ bgcolor: 'grey.200', width: 64, height: 64, '&:hover': { bgcolor: 'grey.300' } }}
+          sx={{ bgcolor: 'grey.200', width: 52, height: 52, '&:hover': { bgcolor: 'grey.300' } }}
         >
-          <StopIcon sx={{ fontSize: 32 }} />
+          <StopIcon sx={{ fontSize: 26 }} />
+        </IconButton>
+
+        <IconButton
+          onClick={onSkipPrev}
+          disabled={!isPlaying}
+          sx={{ bgcolor: 'grey.100', width: 56, height: 56, '&:hover': { bgcolor: 'grey.200' } }}
+        >
+          <SkipPreviousIcon sx={{ fontSize: 30 }} />
         </IconButton>
 
         {loading ? (
@@ -88,17 +127,42 @@ export default function PlayerControls({
             onClick={isPlaying ? onPause : (progress > 0 ? onResume : onPlay)}
             disabled={!ready}
             sx={{
-              bgcolor: 'primary.main', color: 'white', width: 80, height: 80,
+              bgcolor: 'primary.main', color: 'white', width: 76, height: 76,
               '&:hover': { bgcolor: 'primary.dark' },
               '&:disabled': { bgcolor: 'grey.300' },
             }}
           >
-            {isPlaying ? <PauseIcon sx={{ fontSize: 44 }} /> : <PlayArrowIcon sx={{ fontSize: 44 }} />}
+            {isPlaying ? <PauseIcon sx={{ fontSize: 42 }} /> : <PlayArrowIcon sx={{ fontSize: 42 }} />}
           </IconButton>
         )}
 
-        <Box sx={{ width: 64 }} />
+        <IconButton
+          onClick={onSkipNext}
+          disabled={!isPlaying}
+          sx={{ bgcolor: 'grey.100', width: 56, height: 56, '&:hover': { bgcolor: 'grey.200' } }}
+        >
+          <SkipNextIcon sx={{ fontSize: 30 }} />
+        </IconButton>
+
+        <Box sx={{ width: 52 }} />
       </Box>
+
+      {/* Volume */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1 }}>
+        <VolumeUpIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
+        <Slider
+          value={volume}
+          min={0}
+          max={1}
+          step={0.05}
+          onChange={(_, v) => onVolumeChange(v)}
+          sx={{ height: 6, '& .MuiSlider-thumb': { width: 18, height: 18 } }}
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 32, textAlign: 'left' }}>
+          {Math.round(volume * 100)}%
+        </Typography>
+      </Box>
+
     </Box>
   );
 }
