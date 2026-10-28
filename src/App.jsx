@@ -16,6 +16,7 @@ import RepeatSettings from './components/RepeatSettings';
 import PlayerControls from './components/PlayerControls';
 import OfflineManager from './components/OfflineManager';
 import BookmarkManager from './components/BookmarkManager';
+import InstallPrompt from './components/InstallPrompt';
 
 const SESSION_KEY = 'quran_session';
 
@@ -239,6 +240,7 @@ export default function App() {
           </>
         )}
       </Container>
+      <InstallPrompt />
     </Box>
   );
 }
