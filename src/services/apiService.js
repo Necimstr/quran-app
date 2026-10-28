@@ -63,6 +63,11 @@ export function getAyahAudioUrl(reciter, surahNumber, ayahNumber) {
   return `${EVERYAYAH_BASE}/${reciter.id}/${surah}${ayah}.mp3`;
 }
 
+// API names already start with "سُورَةُ"; strip it where the UI adds its own label
+export function surahTitle(surah) {
+  return surah?.name?.replace(/^سُورَةُ\s*/, '') || '';
+}
+
 export async function fetchSurahAyahs(surahNumber) {
   const res = await fetch(`${ALQURAN_BASE}/surah/${surahNumber}`);
   if (!res.ok) throw new Error('Failed to fetch surah text');

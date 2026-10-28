@@ -31,26 +31,24 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
   return (
     <Box>
       <Typography sx={{
-        color: 'text.secondary', fontWeight: 700, mb: 0.75,
-        display: 'block', fontSize: '0.7rem',
-        letterSpacing: '0.08em', textTransform: 'uppercase',
+        color: 'text.primary', fontWeight: 800, mb: 1,
+        display: 'block', fontSize: '1.1rem',
       }}>
         {label}
       </Typography>
       <TextField
         fullWidth
-        size="small"
-        placeholder="ابحث في الآيات..."
+        placeholder="ابحث بكلمة من الآية..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         InputProps={{
           startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
         }}
-        sx={{ mb: 0.75, '& input': { fontSize: '0.92rem' } }}
+        sx={{ mb: 1, '& input': { fontSize: '1.05rem' }, '& .MuiOutlinedInput-root': { borderRadius: '14px' } }}
       />
       <Box sx={{
-        maxHeight: 220, overflowY: 'auto',
-        border: '1px solid', borderColor: 'divider', borderRadius: 2,
+        maxHeight: '46vh', overflowY: 'auto',
+        border: '1px solid', borderColor: 'divider', borderRadius: '16px',
         bgcolor: 'background.paper',
       }}>
         {options.length === 0 && (
@@ -73,13 +71,11 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
               disabled={disabled}
               sx={{
                 width: '100%', display: 'flex', alignItems: 'baseline',
-                gap: 1.25, px: 1.5, py: 1,
+                gap: 1.5, px: 2, py: 1.5, minHeight: 56,
                 bgcolor: selected ? 'primary.main' : 'transparent',
                 color: selected ? 'primary.contrastText' : 'text.primary',
                 opacity: disabled ? 0.4 : 1,
                 borderBottom: '1px solid', borderColor: selected ? 'primary.dark' : 'divider',
-                borderInlineStart: '3px solid transparent',
-                borderInlineStartColor: selected ? 'primary.dark' : 'transparent',
                 '&:last-child': { borderBottom: 'none' },
                 '&:hover': { bgcolor: selected ? 'primary.dark' : 'action.hover' },
                 '&.Mui-disabled': { cursor: 'not-allowed' },
@@ -90,9 +86,9 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
               <Typography
                 component="span"
                 sx={{
-                  fontSize: '0.72rem', fontWeight: 700,
-                  opacity: selected ? 0.9 : 0.55,
-                  minWidth: 22, color: 'inherit', flexShrink: 0,
+                  fontSize: '1rem', fontWeight: 800,
+                  opacity: selected ? 0.95 : 0.65,
+                  minWidth: 30, color: 'inherit', flexShrink: 0,
                   fontVariantNumeric: 'tabular-nums',
                 }}
               >
@@ -102,7 +98,7 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
                 component="span"
                 sx={{
                   fontFamily: '"Noto Naskh Arabic", serif',
-                  fontSize: '0.95rem', lineHeight: 1.65, color: 'inherit',
+                  fontSize: '1.15rem', lineHeight: 1.85, color: 'inherit',
                   textAlign: 'right', direction: 'rtl',
                   flexGrow: 1,
                 }}

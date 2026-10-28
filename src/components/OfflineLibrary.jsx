@@ -7,9 +7,18 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import MicIcon from '@mui/icons-material/Mic';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { listCachedDetailed, deleteCachedSurah, deleteCachedReciter } from '../hooks/useQuranPlayer';
 
-export default function OfflineLibrary({ reciters = [], surahs = [] }) {
+// First contiguous run of saved ayahs, so an incomplete surah still plays fully offline
+function playableRange(set) {
+  const start = Math.min(...set);
+  let end = start;
+  while (set.has(end + 1)) end++;
+  return { start, end };
+}
+
+export default function OfflineLibrary({ reciters = [], surahs = [], activeKey = null, onPlay }) {
   const [data, setData] = useState({});
   const [confirm, setConfirm] = useState(null);
   const [open, setOpen] = useState(false);
@@ -64,10 +73,11 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
         }
         sx={{
           justifyContent: 'space-between',
-          minHeight: 48,
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          px: 1.5,
+          minHeight: 58,
+          fontSize: '1.05rem',
+          fontWeight: 800,
+          borderRadius: '14px',
+          px: 2,
         }}
       >
         <Box sx={{ flexGrow: 1, textAlign: 'start', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -77,7 +87,7 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
               label={`${entries.length} قارئ`}
               size="small"
               color="primary"
-              sx={{ height: 22, fontSize: '0.72rem' }}
+              sx={{ height: 26, fontSize: '0.85rem' }}
             />
           )}
         </Box>
@@ -86,7 +96,7 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
       <Collapse in={open} unmountOnExit>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
           {entries.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+            <Typography color="text.secondary" sx={{ textAlign: 'center', py: 2, fontSize: '1rem' }}>
               لا توجد ملفات محفوظة بعد
             </Typography>
           ) : entries.map((e) => (
@@ -95,7 +105,7 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
           disableGutters
           sx={{
             '&:before': { display: 'none' },
-            borderRadius: 2,
+            borderRadius: '16px',
             boxShadow: 0,
             border: '1px solid',
             borderColor: 'divider',
@@ -111,10 +121,10 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
                 <MicIcon sx={{ fontSize: 18 }} />
               </Box>
               <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '1.08rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {e.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: '0.92rem' }}>
                   {e.surahCount} سورة
                 </Typography>
               </Box>
@@ -139,33 +149,25 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
                   const surah = surahByNumber[num];
                   const total = surah?.numberOfAyahs ?? set.size;
                   const complete = set.size >= total;
+                  const active = activeKey === `${e.id}:${num}`;
+                  const canPlay = !!onPlay && !!surah && !!reciterById[e.id];
+                  const label = surah?.name || `سورة ${num}`;
                   return (
-                    <ListItem
-                      key={num}
-                      divider
-                      secondaryAction={
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={() => setConfirm({
-                            type: 'surah',
-                            reciterId: e.id,
-                            surahNumber: num,
-                            name: `${surah?.name || num} (${e.name})`,
-                          })}
-                          sx={{ color: 'error.main' }}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      }
-                      sx={{ py: 0.75 }}
-                    >
+                    <ListItem key={num} divider sx={{ py: 1.25, gap: 0.75, minHeight: 64 }}>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                              {num}. {surah?.name || `سورة ${num}`}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Typography sx={{ fontSize: '1.05rem', fontWeight: 700 }}>
+                              {num}. {label}
                             </Typography>
+                            {active && (
+                              <Chip
+                                label="قيد التشغيل"
+                                size="small"
+                                color="primary"
+                                sx={{ height: 20, fontSize: '0.7rem' }}
+                              />
+                            )}
                             {!complete && (
                               <Chip
                                 label="غير مكتملة"
@@ -177,6 +179,26 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
                           </Box>
                         }
                       />
+                      <IconButton
+                        disabled={!canPlay}
+                        onClick={() => onPlay({ reciterId: e.id, surahNumber: num, ...playableRange(set) })}
+                        aria-label={`تشغيل ${label} — ${e.name}`}
+                        sx={{ color: 'primary.main', bgcolor: 'action.hover', width: 48, height: 48 }}
+                      >
+                        <PlayArrowIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => setConfirm({
+                          type: 'surah',
+                          reciterId: e.id,
+                          surahNumber: num,
+                          name: `${label} (${e.name})`,
+                        })}
+                        aria-label={`حذف ${label}`}
+                        sx={{ color: 'error.main', width: 48, height: 48 }}
+                      >
+                        <DeleteOutlineIcon />
+                      </IconButton>
                     </ListItem>
                   );
                 })}
