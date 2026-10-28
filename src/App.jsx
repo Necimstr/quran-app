@@ -10,12 +10,13 @@ import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { fetchSurahs, fetchReciters, fetchSurahAyahs } from './services/apiService';
-import { useQuranPlayer, listCachedVerses } from './hooks/useQuranPlayer';
+import { useQuranPlayer, listCachedVerses, listCachedByReciter } from './hooks/useQuranPlayer';
 import ReciterSelector from './components/ReciterSelector';
 import RangeSelector from './components/RangeSelector';
 import RepeatSettings from './components/RepeatSettings';
 import PlayerControls from './components/PlayerControls';
 import OfflineManager from './components/OfflineManager';
+import OfflineLibrary from './components/OfflineLibrary';
 import BookmarkManager from './components/BookmarkManager';
 import InstallPrompt from './components/InstallPrompt';
 import HelpDialog from './components/HelpDialog';
@@ -42,6 +43,7 @@ export default function App() {
   const [tab, setTab] = useState(0);
   const [online, setOnline] = useState(navigator.onLine);
   const [cachedVerses, setCachedVerses] = useState(new Set());
+  const [cachedByReciter, setCachedByReciter] = useState({});
   const [helpOpen, setHelpOpen] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
 
@@ -117,13 +119,12 @@ export default function App() {
       listCachedVerses(reciter, surah?.number).then((s) => {
         if (!cancelled) setCachedVerses(s);
       });
+      listCachedByReciter().then((m) => {
+        if (!cancelled) setCachedByReciter(m);
+      });
     };
     refresh();
-    const onCache = (e) => {
-      if (!reciter || !surah) return;
-      const prefix = `${reciter.id}:${surah.number}:`;
-      if (e.detail?.key?.startsWith(prefix)) refresh();
-    };
+    const onCache = () => refresh();
     window.addEventListener('quran:cache-updated', onCache);
     return () => {
       cancelled = true;
@@ -261,6 +262,8 @@ export default function App() {
                   loading={loadingReciters}
                   value={reciter}
                   onChange={setReciter}
+                  cachedByReciter={cachedByReciter}
+                  offline={!online}
                 />
               )}
               {tab === 1 && (
@@ -271,6 +274,7 @@ export default function App() {
                   endVerse={endVerse}
                   ayahsMap={ayahsMap}
                   cachedVerses={cachedVerses}
+                  cachedSurahs={reciter ? cachedByReciter[reciter.id] : null}
                   offline={!online}
                   onSurahChange={handleSurahChange}
                   onStartChange={handleStartChange}
@@ -302,6 +306,9 @@ export default function App() {
                       reciter={reciter}
                       surah={surah}
                     />
+                    <Box sx={{ mt: 2 }}>
+                      <OfflineLibrary reciters={reciters} surahs={surahs} />
+                    </Box>
                   </Box>
                 </Box>
               )}

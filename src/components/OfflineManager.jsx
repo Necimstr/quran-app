@@ -1,24 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Button, LinearProgress, Typography, Chip } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getAyahAudioUrl } from '../services/apiService';
-import { cacheKey, getCachedAudio, setCachedAudio } from '../hooks/useQuranPlayer';
+import { cacheKey, getCachedAudio, setCachedAudio, listCachedVerses } from '../hooks/useQuranPlayer';
 
 export default function OfflineManager({ reciter, surah }) {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [done, setDone] = useState(false);
+  const [cachedCount, setCachedCount] = useState(0);
   const [error, setError] = useState(null);
 
   const ready = reciter && surah;
   const total = ready ? surah.numberOfAyahs : 0;
+  const done = ready && cachedCount >= total;
+  const partial = cachedCount > 0 && !done;
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      if (!reciter || !surah) {
+        setCachedCount(0);
+        return;
+      }
+      listCachedVerses(reciter, surah.number).then((s) => {
+        if (!cancelled) setCachedCount(s.size);
+      });
+    };
+    refresh();
+    const onCache = () => refresh();
+    window.addEventListener('quran:cache-updated', onCache);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('quran:cache-updated', onCache);
+    };
+  }, [reciter, surah]);
 
   async function handleCache() {
-    if (!ready) return;
+    if (!ready || done) return;
     setDownloading(true);
-    setDone(false);
     setError(null);
     setProgress(0);
 
@@ -44,17 +65,16 @@ export default function OfflineManager({ reciter, surah }) {
     }
 
     setDownloading(false);
-    setDone(true);
   }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       <Button
-        variant="outlined"
+        variant={done ? 'contained' : 'outlined'}
         size="large"
         startIcon={done ? <CheckCircleIcon /> : <DownloadIcon />}
         onClick={handleCache}
-        disabled={!ready || downloading}
+        disabled={!ready || downloading || done}
         color={done ? 'success' : 'primary'}
         sx={{ minHeight: 56, fontSize: '1rem', fontWeight: 600 }}
       >
@@ -62,6 +82,8 @@ export default function OfflineManager({ reciter, surah }) {
           ? `تم حفظ السورة كاملة (${total} آية)`
           : downloading
           ? `جارٍ التحميل... ${progress}%`
+          : partial
+          ? `إكمال التحميل (${cachedCount}/${total} آية محفوظة)`
           : ready
           ? `تحميل كامل السورة (${total} آية) للاستماع بدون إنترنت`
           : 'تحميل السورة للاستماع بدون إنترنت'}

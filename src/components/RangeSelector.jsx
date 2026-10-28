@@ -1,8 +1,10 @@
 import { FormControl, InputLabel, Select, MenuItem, Box, Typography, Chip } from '@mui/material';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
+import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
 import VerseGrid from './VerseGrid';
 
-export default function RangeSelector({ surahs, surah, startVerse, endVerse, onSurahChange, onStartChange, onEndChange, ayahsMap = {}, cachedVerses, offline = false }) {
+export default function RangeSelector({ surahs, surah, startVerse, endVerse, onSurahChange, onStartChange, onEndChange, ayahsMap = {}, cachedVerses, cachedSurahs, offline = false }) {
   const totalVerses = surah?.numberOfAyahs || 1;
 
   return (
@@ -29,14 +31,28 @@ export default function RangeSelector({ surahs, surah, startVerse, endVerse, onS
           }}
           sx={{ fontSize: '1.1rem', minHeight: 56 }}
         >
-          {surahs.map((s) => (
-            <MenuItem key={s.number} value={s.number} sx={{ fontSize: '1rem', py: 1.2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
-                <Typography sx={{ fontWeight: 600 }}>{s.number}. {s.name}</Typography>
-                <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem', alignSelf: 'center' }}>{s.englishName}</Typography>
-              </Box>
-            </MenuItem>
-          ))}
+          {surahs.map((s) => {
+            const isCached = cachedSurahs?.has(s.number);
+            const disabled = offline && !isCached;
+            return (
+              <MenuItem
+                key={s.number}
+                value={s.number}
+                disabled={disabled}
+                sx={{ fontSize: '1rem', py: 1.2, opacity: disabled ? 0.5 : 1 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+                  <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>{s.number}. {s.name}</Typography>
+                  {isCached ? (
+                    <DownloadDoneIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                  ) : offline ? (
+                    <CloudOffIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                  ) : null}
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>{s.englishName}</Typography>
+                </Box>
+              </MenuItem>
+            );
+          })}
         </Select>
       </FormControl>
 

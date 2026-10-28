@@ -1,0 +1,206 @@
+import { useEffect, useState } from 'react';
+import {
+  Box, Typography, Accordion, AccordionSummary, AccordionDetails,
+  List, ListItem, ListItemText, IconButton, Chip, Button, Dialog,
+  DialogTitle, DialogContent, DialogActions, Collapse,
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
+import MicIcon from '@mui/icons-material/Mic';
+import { listCachedDetailed, deleteCachedSurah, deleteCachedReciter } from '../hooks/useQuranPlayer';
+
+export default function OfflineLibrary({ reciters = [], surahs = [] }) {
+  const [data, setData] = useState({});
+  const [confirm, setConfirm] = useState(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      listCachedDetailed().then((m) => { if (!cancelled) setData(m); });
+    };
+    refresh();
+    const onCache = () => refresh();
+    window.addEventListener('quran:cache-updated', onCache);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('quran:cache-updated', onCache);
+    };
+  }, []);
+
+  const reciterById = Object.fromEntries(reciters.map((r) => [r.id, r]));
+  const surahByNumber = Object.fromEntries(surahs.map((s) => [s.number, s]));
+
+  const entries = Object.entries(data)
+    .map(([rid, surahMap]) => ({
+      id: rid,
+      name: reciterById[rid]?.name || rid,
+      surahMap,
+      surahCount: Object.keys(surahMap).length,
+      ayahCount: Object.values(surahMap).reduce((n, set) => n + set.size, 0),
+    }))
+    .sort((a, b) => b.ayahCount - a.ayahCount);
+
+  const handleConfirm = async () => {
+    if (!confirm) return;
+    if (confirm.type === 'surah') {
+      await deleteCachedSurah(confirm.reciterId, confirm.surahNumber);
+    } else if (confirm.type === 'reciter') {
+      await deleteCachedReciter(confirm.reciterId);
+    }
+    setConfirm(null);
+  };
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Button
+        onClick={() => setOpen((v) => !v)}
+        variant="outlined"
+        endIcon={
+          <ExpandMoreIcon sx={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+          }} />
+        }
+        sx={{
+          justifyContent: 'space-between',
+          minHeight: 48,
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          px: 1.5,
+        }}
+      >
+        <Box sx={{ flexGrow: 1, textAlign: 'start', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <span>التلاوات المحفوظة</span>
+          {entries.length > 0 && (
+            <Chip
+              label={`${entries.length} قارئ`}
+              size="small"
+              color="primary"
+              sx={{ height: 22, fontSize: '0.72rem' }}
+            />
+          )}
+        </Box>
+      </Button>
+
+      <Collapse in={open} unmountOnExit>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+          {entries.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+              لا توجد ملفات محفوظة بعد
+            </Typography>
+          ) : entries.map((e) => (
+        <Accordion
+          key={e.id}
+          disableGutters
+          sx={{
+            '&:before': { display: 'none' },
+            borderRadius: 2,
+            boxShadow: 0,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+              <Box sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: '50%',
+                bgcolor: 'primary.main', color: 'primary.contrastText', flexShrink: 0,
+              }}>
+                <MicIcon sx={{ fontSize: 18 }} />
+              </Box>
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {e.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {e.surahCount} سورة
+                </Typography>
+              </Box>
+              <IconButton
+                size="small"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setConfirm({ type: 'reciter', reciterId: e.id, name: e.name });
+                }}
+                sx={{ color: 'error.main' }}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 0 }}>
+            <List dense disablePadding>
+              {Object.entries(e.surahMap)
+                .map(([num, set]) => [Number(num), set])
+                .sort((a, b) => a[0] - b[0])
+                .map(([num, set]) => {
+                  const surah = surahByNumber[num];
+                  const total = surah?.numberOfAyahs ?? set.size;
+                  const complete = set.size >= total;
+                  return (
+                    <ListItem
+                      key={num}
+                      divider
+                      secondaryAction={
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => setConfirm({
+                            type: 'surah',
+                            reciterId: e.id,
+                            surahNumber: num,
+                            name: `${surah?.name || num} (${e.name})`,
+                          })}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      }
+                      sx={{ py: 0.75 }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                              {num}. {surah?.name || `سورة ${num}`}
+                            </Typography>
+                            {!complete && (
+                              <Chip
+                                label="غير مكتملة"
+                                size="small"
+                                color="warning"
+                                sx={{ height: 20, fontSize: '0.7rem' }}
+                              />
+                            )}
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  );
+                })}
+            </List>
+          </AccordionDetails>
+        </Accordion>
+      ))}
+        </Box>
+      </Collapse>
+
+      <Dialog open={!!confirm} onClose={() => setConfirm(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>تأكيد الحذف</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {confirm?.type === 'reciter'
+              ? `هل تريد حذف جميع الملفات المحفوظة للقارئ «${confirm?.name}»؟`
+              : `هل تريد حذف «${confirm?.name}» من الذاكرة؟`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirm(null)}>إلغاء</Button>
+          <Button color="error" variant="contained" onClick={handleConfirm}>حذف</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}

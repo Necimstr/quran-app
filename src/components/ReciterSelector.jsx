@@ -6,6 +6,10 @@ import {
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import SearchIcon from '@mui/icons-material/Search';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
+import { Chip } from '@mui/material';
 
 const STARRED_KEY = 'quran_starred_reciters';
 
@@ -17,7 +21,7 @@ function saveStarred(ids) {
   localStorage.setItem(STARRED_KEY, JSON.stringify(ids));
 }
 
-export default function ReciterSelector({ reciters, loading, value, onChange }) {
+export default function ReciterSelector({ reciters, loading, value, onChange, cachedByReciter = {}, offline = false }) {
   const [search, setSearch] = useState('');
   const [starred, setStarred] = useState(getStarred);
 
@@ -47,8 +51,21 @@ export default function ReciterSelector({ reciters, loading, value, onChange }) 
     return <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box>;
   }
 
+  const availableCount = Object.keys(cachedByReciter).length;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      {offline && (
+        <Chip
+          icon={<WifiOffIcon />}
+          label={availableCount
+            ? `غير متصل — ${availableCount} قارئ متاح`
+            : 'غير متصل — لا يوجد أي قارئ محفوظ'}
+          color={availableCount ? 'warning' : 'error'}
+          sx={{ fontSize: '0.9rem', height: 36, alignSelf: 'flex-start' }}
+        />
+      )}
+
       <TextField
         fullWidth
         placeholder="ابحث عن قارئ..."
@@ -85,6 +102,9 @@ export default function ReciterSelector({ reciters, loading, value, onChange }) 
             const isSelected = value?.id === r.id;
             const prevStarred = i > 0 && starred.includes(sorted[i - 1]?.id);
             const showDivider = !search && isStarred === false && prevStarred === true;
+            const cachedSurahs = cachedByReciter[r.id];
+            const hasCache = !!cachedSurahs?.size;
+            const disabled = offline && !hasCache;
 
             return (
               <Box key={r.id}>
@@ -92,7 +112,12 @@ export default function ReciterSelector({ reciters, loading, value, onChange }) 
                 <ListItemButton
                   selected={isSelected}
                   onClick={() => onChange(r)}
-                  sx={{ py: 1.2, gap: 1 }}
+                  disabled={disabled}
+                  sx={{
+                    py: 1.2, gap: 1,
+                    opacity: disabled ? 0.45 : 1,
+                    '&.Mui-disabled': { cursor: 'not-allowed' },
+                  }}
                 >
                   <IconButton
                     size="small"
@@ -105,6 +130,11 @@ export default function ReciterSelector({ reciters, loading, value, onChange }) 
                     primary={r.name}
                     primaryTypographyProps={{ fontSize: '1rem', fontWeight: isSelected ? 700 : 400 }}
                   />
+                  {hasCache ? (
+                    <DownloadDoneIcon sx={{ fontSize: 18, color: 'success.main', opacity: 0.9 }} />
+                  ) : offline ? (
+                    <CloudOffIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+                  ) : null}
                 </ListItemButton>
               </Box>
             );

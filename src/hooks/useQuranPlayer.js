@@ -41,6 +41,101 @@ export async function cacheKey(reciter, surahNumber, ayahNumber) {
   return `${reciter.id}:${surahNumber}:${ayahNumber}`;
 }
 
+export async function listCachedDetailed() {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAllKeys();
+    req.onsuccess = () => {
+      const map = {};
+      for (const k of req.result) {
+        if (typeof k !== 'string') continue;
+        const parts = k.split(':');
+        if (parts.length !== 3) continue;
+        const [reciterId, surahStr, ayahStr] = parts;
+        const surahNum = Number(surahStr);
+        const ayahNum = Number(ayahStr);
+        if (!Number.isFinite(surahNum) || !Number.isFinite(ayahNum)) continue;
+        if (!map[reciterId]) map[reciterId] = {};
+        if (!map[reciterId][surahNum]) map[reciterId][surahNum] = new Set();
+        map[reciterId][surahNum].add(ayahNum);
+      }
+      resolve(map);
+    };
+    req.onerror = () => resolve({});
+  });
+}
+
+export async function deleteCachedSurah(reciterId, surahNumber) {
+  const db = await openDB();
+  const prefix = `${reciterId}:${surahNumber}:`;
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAllKeys();
+    req.onsuccess = () => {
+      let removed = 0;
+      for (const k of req.result) {
+        if (typeof k === 'string' && k.startsWith(prefix)) {
+          store.delete(k);
+          removed++;
+        }
+      }
+      tx.oncomplete = () => {
+        window.dispatchEvent(new CustomEvent('quran:cache-updated', { detail: { deleted: prefix } }));
+        resolve(removed);
+      };
+    };
+    req.onerror = () => resolve(0);
+  });
+}
+
+export async function deleteCachedReciter(reciterId) {
+  const db = await openDB();
+  const prefix = `${reciterId}:`;
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAllKeys();
+    req.onsuccess = () => {
+      let removed = 0;
+      for (const k of req.result) {
+        if (typeof k === 'string' && k.startsWith(prefix)) {
+          store.delete(k);
+          removed++;
+        }
+      }
+      tx.oncomplete = () => {
+        window.dispatchEvent(new CustomEvent('quran:cache-updated', { detail: { deleted: prefix } }));
+        resolve(removed);
+      };
+    };
+    req.onerror = () => resolve(0);
+  });
+}
+
+export async function listCachedByReciter() {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAllKeys();
+    req.onsuccess = () => {
+      const map = {};
+      for (const k of req.result) {
+        if (typeof k !== 'string') continue;
+        const [reciterId, surahStr] = k.split(':');
+        if (!reciterId || !surahStr) continue;
+        const surahNum = Number(surahStr);
+        if (!Number.isFinite(surahNum)) continue;
+        if (!map[reciterId]) map[reciterId] = new Set();
+        map[reciterId].add(surahNum);
+      }
+      resolve(map);
+    };
+    req.onerror = () => resolve({});
+  });
+}
+
 export async function listCachedVerses(reciter, surahNumber) {
   if (!reciter || !surahNumber) return new Set();
   const db = await openDB();
