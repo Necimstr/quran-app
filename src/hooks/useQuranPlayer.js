@@ -60,6 +60,21 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
     stateRef.current = { reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat };
   }, [reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat]);
 
+  // Stop and reset when reciter or surah changes
+  useEffect(() => {
+    stopRequestedRef.current = true;
+    audioRef.current.pause();
+    audioRef.current.src = '';
+    playingRef.current = false;
+    setIsPlaying(false);
+    setCurrentVerse(startVerse);
+    setProgress(0);
+    setDuration(0);
+    setVerseCount(0);
+    setGroupCount(0);
+    setError(null);
+  }, [reciter?.id, surah?.number]);
+
   useEffect(() => {
     const audio = audioRef.current;
     const onTimeUpdate = () => setProgress(audio.currentTime);
