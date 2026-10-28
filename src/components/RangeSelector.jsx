@@ -79,9 +79,11 @@ export default function RangeSelector({
         }}>
           <WifiOffIcon sx={{ fontSize: 18, flexShrink: 0 }} />
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>
-            {cachedSurahs?.size
-              ? `غير متصل · ${cachedSurahs.size} سورة محفوظة متاحة`
-              : 'غير متصل · لا توجد سور محفوظة لهذا القارئ'}
+            {!cachedSurahs?.size
+              ? 'غير متصل · لا توجد سور محفوظة لهذا القارئ'
+              : cachedSurahs.size === 1
+              ? 'غير متصل · سورة واحدة محفوظة'
+              : `غير متصل · ${cachedSurahs.size} سور محفوظة`}
           </Typography>
         </Box>
       )}

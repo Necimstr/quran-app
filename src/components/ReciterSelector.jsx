@@ -57,14 +57,24 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {offline && (
-        <Chip
-          icon={<WifiOffIcon />}
-          label={availableCount
-            ? `غير متصل — ${availableCount} قارئ متاح`
-            : 'غير متصل — لا يوجد أي قارئ محفوظ'}
-          color={availableCount ? 'warning' : 'error'}
-          sx={{ fontSize: '0.9rem', height: 36, alignSelf: 'flex-start' }}
-        />
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1.25,
+          px: 1.5, py: 1, borderRadius: 2,
+          bgcolor: availableCount ? 'warning.light' : 'error.light',
+          color: availableCount ? 'warning.dark' : 'error.dark',
+          border: '1px solid',
+          borderColor: availableCount ? 'warning.main' : 'error.main',
+          opacity: 0.95,
+        }}>
+          <WifiOffIcon sx={{ fontSize: 18, flexShrink: 0 }} />
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>
+            {availableCount === 0
+              ? 'غير متصل · لا يوجد قارئ محفوظ'
+              : availableCount === 1
+              ? 'غير متصل · قارئ واحد متاح'
+              : `غير متصل · ${availableCount} قراء متاحون`}
+          </Typography>
+        </Box>
       )}
 
       <TextField
