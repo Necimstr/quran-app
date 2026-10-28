@@ -9,7 +9,7 @@ import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { fetchSurahs, fetchReciters, fetchSurahAyahs } from './services/apiService';
-import { useQuranPlayer } from './hooks/useQuranPlayer';
+import { useQuranPlayer, listCachedVerses } from './hooks/useQuranPlayer';
 import ReciterSelector from './components/ReciterSelector';
 import RangeSelector from './components/RangeSelector';
 import RepeatSettings from './components/RepeatSettings';
@@ -36,6 +36,8 @@ export default function App() {
   const [surahsError, setSurahsError] = useState(null);
   const [ayahsMap, setAyahsMap] = useState({});
   const [tab, setTab] = useState(0);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [cachedVerses, setCachedVerses] = useState(new Set());
 
   const session = loadSession();
 
@@ -73,6 +75,37 @@ export default function App() {
       .finally(() => setLoadingReciters(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      listCachedVerses(reciter, surah?.number).then((s) => {
+        if (!cancelled) setCachedVerses(s);
+      });
+    };
+    refresh();
+    const onCache = (e) => {
+      if (!reciter || !surah) return;
+      const prefix = `${reciter.id}:${surah.number}:`;
+      if (e.detail?.key?.startsWith(prefix)) refresh();
+    };
+    window.addEventListener('quran:cache-updated', onCache);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('quran:cache-updated', onCache);
+    };
+  }, [reciter, surah]);
 
   useEffect(() => {
     if (!surah) return;
@@ -201,6 +234,8 @@ export default function App() {
                   startVerse={startVerse}
                   endVerse={endVerse}
                   ayahsMap={ayahsMap}
+                  cachedVerses={cachedVerses}
+                  offline={!online}
                   onSurahChange={handleSurahChange}
                   onStartChange={handleStartChange}
                   onEndChange={setEndVerse}
@@ -230,8 +265,6 @@ export default function App() {
                     <OfflineManager
                       reciter={reciter}
                       surah={surah}
-                      startVerse={startVerse}
-                      endVerse={endVerse}
                     />
                   </Box>
                 </Box>

@@ -29,13 +29,37 @@ async function setCachedAudio(key, blob) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const req = tx.objectStore(STORE_NAME).put(blob, key);
-    req.onsuccess = () => resolve();
+    req.onsuccess = () => {
+      window.dispatchEvent(new CustomEvent('quran:cache-updated', { detail: { key } }));
+      resolve();
+    };
     req.onerror = (e) => reject(e.target.error);
   });
 }
 
 export async function cacheKey(reciter, surahNumber, ayahNumber) {
   return `${reciter.id}:${surahNumber}:${ayahNumber}`;
+}
+
+export async function listCachedVerses(reciter, surahNumber) {
+  if (!reciter || !surahNumber) return new Set();
+  const db = await openDB();
+  const prefix = `${reciter.id}:${surahNumber}:`;
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAllKeys();
+    req.onsuccess = () => {
+      const set = new Set();
+      for (const k of req.result) {
+        if (typeof k === 'string' && k.startsWith(prefix)) {
+          const n = Number(k.slice(prefix.length));
+          if (Number.isFinite(n)) set.add(n);
+        }
+      }
+      resolve(set);
+    };
+    req.onerror = () => resolve(new Set());
+  });
 }
 
 export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat }) {
@@ -125,11 +149,13 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
   const loadAudio = useCallback(async (reciter, surahNum, verseNum) => {
     const key = await cacheKey(reciter, surahNum, verseNum);
     const cached = await getCachedAudio(key);
-    if (cached) return URL.createObjectURL(cached);
-    return getAyahAudioUrl(reciter, surahNum, verseNum);
+    if (cached) return { src: URL.createObjectURL(cached), cached: true };
+    if (!navigator.onLine) return { src: null, cached: false, offlineMiss: true };
+    return { src: getAyahAudioUrl(reciter, surahNum, verseNum), cached: false };
   }, []);
 
   const preloadVerse = useCallback(async (reciter, surahNum, verseNum) => {
+    if (!navigator.onLine) return;
     try {
       const key = await cacheKey(reciter, surahNum, verseNum);
       const existing = await getCachedAudio(key);
@@ -173,14 +199,25 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
             setError(null);
 
             try {
-              const src = await loadAudio(reciter, surah.number, v);
+              const result = await loadAudio(reciter, surah.number, v);
+              if (result.offlineMiss) {
+                setLoading(false);
+                setError(`الآية ${v} غير محفوظة — توقف التشغيل (لا يوجد اتصال بالإنترنت)`);
+                stopRequestedRef.current = true;
+                break outer;
+              }
               const audio = audioRef.current;
-              audio.src = src;
+              audio.src = result.src;
               audio.playbackRate = speedRef.current;
               await audio.play();
               setLoading(false);
             } catch {
               setLoading(false);
+              if (!navigator.onLine) {
+                setError(`فقدان الاتصال — توقف التشغيل عند الآية ${v}`);
+                stopRequestedRef.current = true;
+                break outer;
+              }
               nextV = v + 1; // skip broken verse
               break;
             }
@@ -192,7 +229,15 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
             if (result.type === 'stop') break outer;
             if (result.type === 'skip-next') { nextV = Math.min(v + 1, endVerse); break; }
             if (result.type === 'skip-prev') { nextV = Math.max(startVerse, v - 1); break; }
-            if (result.type === 'error') { nextV = v + 1; break; }
+            if (result.type === 'error') {
+              if (!navigator.onLine) {
+                setError(`فقدان الاتصال — توقف التشغيل عند الآية ${v}`);
+                stopRequestedRef.current = true;
+                break outer;
+              }
+              nextV = v + 1;
+              break;
+            }
             // 'ended' — loop continues for next repeat
           }
 

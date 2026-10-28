@@ -1,11 +1,23 @@
-import { FormControl, InputLabel, Select, MenuItem, Box, Typography } from '@mui/material';
+import { FormControl, InputLabel, Select, MenuItem, Box, Typography, Chip } from '@mui/material';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
 import VerseGrid from './VerseGrid';
 
-export default function RangeSelector({ surahs, surah, startVerse, endVerse, onSurahChange, onStartChange, onEndChange, ayahsMap = {} }) {
+export default function RangeSelector({ surahs, surah, startVerse, endVerse, onSurahChange, onStartChange, onEndChange, ayahsMap = {}, cachedVerses, offline = false }) {
   const totalVerses = surah?.numberOfAyahs || 1;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {offline && (
+        <Chip
+          icon={<WifiOffIcon />}
+          label={cachedVerses?.size
+            ? `غير متصل — ${cachedVerses.size} آية محفوظة متاحة`
+            : 'غير متصل — لا توجد آيات محفوظة لهذه السورة'}
+          color={cachedVerses?.size ? 'warning' : 'error'}
+          sx={{ fontSize: '0.9rem', height: 36, alignSelf: 'flex-start' }}
+        />
+      )}
+
       <FormControl fullWidth>
         <InputLabel sx={{ fontSize: '1.1rem' }}>السورة</InputLabel>
         <Select
@@ -33,6 +45,8 @@ export default function RangeSelector({ surahs, surah, startVerse, endVerse, onS
         total={totalVerses}
         value={startVerse}
         ayahsMap={ayahsMap}
+        cachedVerses={cachedVerses}
+        disableUncached={offline}
         onChange={(v) => {
           onStartChange(v);
           if (v > endVerse) onEndChange(v);
@@ -45,6 +59,8 @@ export default function RangeSelector({ surahs, surah, startVerse, endVerse, onS
         value={endVerse}
         min={startVerse}
         ayahsMap={ayahsMap}
+        cachedVerses={cachedVerses}
+        disableUncached={offline}
         onChange={onEndChange}
       />
     </Box>

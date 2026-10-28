@@ -6,14 +6,14 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getAyahAudioUrl } from '../services/apiService';
 import { cacheKey, getCachedAudio, setCachedAudio } from '../hooks/useQuranPlayer';
 
-export default function OfflineManager({ reciter, surah, startVerse, endVerse }) {
+export default function OfflineManager({ reciter, surah }) {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
 
   const ready = reciter && surah;
-  const total = ready ? endVerse - startVerse + 1 : 0;
+  const total = ready ? surah.numberOfAyahs : 0;
 
   async function handleCache() {
     if (!ready) return;
@@ -23,7 +23,7 @@ export default function OfflineManager({ reciter, surah, startVerse, endVerse })
     setProgress(0);
 
     let completed = 0;
-    for (let v = startVerse; v <= endVerse; v++) {
+    for (let v = 1; v <= total; v++) {
       try {
         const key = await cacheKey(reciter, surah.number, v);
         const existing = await getCachedAudio(key);
@@ -59,9 +59,11 @@ export default function OfflineManager({ reciter, surah, startVerse, endVerse })
         sx={{ minHeight: 56, fontSize: '1rem', fontWeight: 600 }}
       >
         {done
-          ? 'تم الحفظ للاستخدام بدون إنترنت'
+          ? `تم حفظ السورة كاملة (${total} آية)`
           : downloading
           ? `جارٍ التحميل... ${progress}%`
+          : ready
+          ? `تحميل كامل السورة (${total} آية) للاستماع بدون إنترنت`
           : 'تحميل السورة للاستماع بدون إنترنت'}
       </Button>
 

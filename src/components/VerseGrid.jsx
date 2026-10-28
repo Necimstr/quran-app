@@ -1,6 +1,8 @@
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Box, Typography, ButtonBase, TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
 
 // Remove diacritical marks and normalize common Arabic letter variants
 function normalize(str) {
@@ -11,7 +13,7 @@ function normalize(str) {
     .replace(/ى/g, 'ي');                  // alef maqsura → ya
 }
 
-export default function VerseGrid({ label, total, value, onChange, min = 1, ayahsMap = {} }) {
+export default function VerseGrid({ label, total, value, onChange, min = 1, ayahsMap = {}, cachedVerses, disableUncached = false }) {
   const allOptions = Array.from({ length: total - min + 1 }, (_, i) => i + min);
   const [search, setSearch] = useState('');
   const selectedRef = useRef(null);
@@ -56,20 +58,25 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
           const selected = v === value;
           const text = ayahsMap[v] || '';
           const preview = text.length > 60 ? text.slice(0, 60) + '…' : text;
+          const isCached = cachedVerses?.has(v);
+          const disabled = disableUncached && !isCached;
 
           return (
             <ButtonBase
               key={v}
               ref={selected ? selectedRef : null}
               onClick={() => onChange(v)}
+              disabled={disabled}
               sx={{
                 width: '100%', display: 'flex', alignItems: 'baseline',
                 gap: 1.5, px: 1.5, py: 1,
                 bgcolor: selected ? 'primary.main' : 'transparent',
                 color: selected ? 'white' : 'text.primary',
+                opacity: disabled ? 0.4 : 1,
                 borderBottom: '1px solid', borderColor: selected ? 'primary.dark' : 'divider',
                 '&:last-child': { borderBottom: 'none' },
                 '&:hover': { bgcolor: selected ? 'primary.dark' : 'action.hover' },
+                '&.Mui-disabled': { cursor: 'not-allowed' },
                 textAlign: 'right', justifyContent: 'flex-start',
                 transition: 'background 0.15s',
               }}
@@ -89,10 +96,18 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
                   fontFamily: '"Noto Naskh Arabic", serif',
                   fontSize: '0.95rem', lineHeight: 1.6, color: 'inherit',
                   textAlign: 'right', direction: 'rtl',
+                  flexGrow: 1,
                 }}
               >
                 {preview || '—'}
               </Typography>
+              {cachedVerses && (
+                isCached ? (
+                  <DownloadDoneIcon sx={{ fontSize: 16, color: selected ? 'inherit' : 'success.main', opacity: 0.8, flexShrink: 0 }} />
+                ) : disableUncached ? (
+                  <CloudOffIcon sx={{ fontSize: 16, color: 'inherit', opacity: 0.6, flexShrink: 0 }} />
+                ) : null
+              )}
             </ButtonBase>
           );
         })}
