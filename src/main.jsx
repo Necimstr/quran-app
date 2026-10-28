@@ -20,24 +20,28 @@ function buildTheme(mode) {
         main: dark ? '#ffb74d' : '#f57f17',
       },
       background: dark
-        ? { default: '#0f1715', paper: '#1a2522' }
-        : { default: '#f5f5f0', paper: '#ffffff' },
+        ? { default: '#0b1311', paper: '#15201d' }
+        : { default: '#f3f1ea', paper: '#ffffff' },
       text: dark
-        ? { primary: '#e8f1ee', secondary: '#9fb3ad' }
-        : { primary: '#1a1a1a', secondary: '#555555' },
+        ? { primary: '#eef5f2', secondary: '#a9bdb7' }
+        : { primary: '#14201d', secondary: '#4f5f5a' },
       divider: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.12)',
     },
     typography: {
-      fontFamily: '"Noto Naskh Arabic", "Segoe UI", "Arial", sans-serif',
+      fontFamily: '"Cairo", "Segoe UI", "Tahoma", sans-serif',
       fontSize: 16,
-      h5: { fontWeight: 700 },
+      h5: { fontWeight: 800 },
       h6: { fontWeight: 600 },
     },
     shape: { borderRadius: 12 },
     components: {
       MuiButton: {
         styleOverrides: {
-          root: { borderRadius: 12, textTransform: 'none', fontWeight: 600 },
+          root: { borderRadius: 14, textTransform: 'none', fontWeight: 700, minHeight: 48, fontSize: '1rem' },
+          sizeLarge: { minHeight: 56, fontSize: '1.05rem' },
+          // No RTL style plugin is installed, so flip MUI's physical icon margins by hand
+          startIcon: { marginLeft: 8, marginRight: -4 },
+          endIcon: { marginRight: 8, marginLeft: -4 },
         },
       },
       MuiPaper: {
@@ -175,6 +179,7 @@ function Root() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <GlobalStyles styles={{
+          html: { fontSize: '112.5%' },
           'html, body': {
             transition: 'background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           },

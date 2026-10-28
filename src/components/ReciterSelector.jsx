@@ -9,10 +9,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Chip } from '@mui/material';
 import { QIRAA_COLORS } from '../services/apiService';
 
 const STARRED_KEY = 'quran_starred_reciters';
+const DEFAULT_QIRAA = 'حفص عن عاصم';
 
 function getStarred() {
   try { return JSON.parse(localStorage.getItem(STARRED_KEY)) || []; }
@@ -59,7 +61,7 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
       {offline && (
         <Box sx={{
           display: 'flex', alignItems: 'center', gap: 1.25,
-          px: 1.5, py: 1, borderRadius: 2,
+          px: 1.5, py: 1, borderRadius: '14px',
           bgcolor: availableCount ? 'warning.light' : 'error.light',
           color: availableCount ? 'warning.dark' : 'error.dark',
           border: '1px solid',
@@ -67,7 +69,7 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
           opacity: 0.95,
         }}>
           <WifiOffIcon sx={{ fontSize: 18, flexShrink: 0 }} />
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.3 }}>
+          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, lineHeight: 1.5 }}>
             {availableCount === 0
               ? 'غير متصل · لا يوجد قارئ محفوظ'
               : availableCount === 1
@@ -82,25 +84,22 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
         placeholder="ابحث عن قارئ..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        size="small"
         InputProps={{
           startAdornment: (
             <InputAdornment position="start"><SearchIcon /></InputAdornment>
           ),
         }}
-        sx={{ '& input': { fontSize: '1rem' } }}
+        sx={{ '& input': { fontSize: '1.1rem', py: 1.75 }, '& .MuiOutlinedInput-root': { borderRadius: '14px', bgcolor: 'background.paper' } }}
       />
 
       <Box sx={{
-        maxHeight: 320, overflowY: 'auto', border: '1px solid',
-        borderColor: 'divider', borderRadius: 2,
-        bgcolor: 'background.paper',
+        border: '1px solid', borderColor: 'divider', borderRadius: '20px',
+        overflow: 'hidden', bgcolor: 'background.paper',
       }}>
         {starred.length > 0 && !search && (
           <Typography variant="caption" sx={{
-            px: 2, py: 0.75, display: 'block',
-            color: 'text.secondary', fontWeight: 700, fontSize: '0.68rem',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
+            px: 2, py: 1, display: 'block',
+            color: 'text.secondary', fontWeight: 700, fontSize: '0.9rem',
             borderBottom: '1px solid', borderColor: 'divider',
             bgcolor: 'action.hover',
           }}>
@@ -129,42 +128,38 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
                   onClick={() => onChange(r)}
                   disabled={disabled}
                   sx={{
-                    py: 1.1, gap: 1,
+                    py: 1.5, px: 1.5, gap: 1.25, minHeight: 68,
                     opacity: disabled ? 0.45 : 1,
-                    borderInlineStart: '3px solid transparent',
-                    '&.Mui-selected': {
-                      bgcolor: 'action.selected',
-                      borderInlineStartColor: 'primary.main',
-                    },
-                    '&.Mui-selected:hover': { bgcolor: 'action.selected' },
+                    '&.Mui-selected': { bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(77,182,172,0.14)' : 'rgba(0,105,92,0.08)') },
+                    '&.Mui-selected:hover': { bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(77,182,172,0.18)' : 'rgba(0,105,92,0.12)') },
                     '&.Mui-disabled': { cursor: 'not-allowed' },
                   }}
                 >
                   <IconButton
-                    size="small"
                     onClick={(e) => toggleStar(e, r.id)}
                     aria-label={isStarred ? 'إزالة من المفضّلة' : 'إضافة إلى المفضّلة'}
-                    sx={{ color: isStarred ? 'warning.main' : 'action.disabled', p: 0.5 }}
+                    sx={{ color: isStarred ? 'warning.main' : 'text.disabled', width: 44, height: 44 }}
                   >
-                    {isStarred ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+                    {isStarred ? <StarIcon /> : <StarBorderIcon />}
                   </IconButton>
                   <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Typography sx={{
-                      fontSize: '0.98rem',
-                      fontWeight: isSelected ? 700 : 500,
+                      fontSize: '1.12rem',
+                      fontWeight: isSelected ? 800 : 600,
                       color: isSelected ? 'primary.main' : 'text.primary',
                       lineHeight: 1.3,
                     }}>
                       {r.name}
                     </Typography>
-                    {r.qiraa && (
+                    {/* Only mark the exception: nearly every reciter is Hafs */}
+                    {r.qiraa && r.qiraa !== DEFAULT_QIRAA && (
                       <Chip
                         label={r.qiraa}
                         size="small"
                         color={QIRAA_COLORS[r.qiraa] || 'default'}
                         variant={QIRAA_COLORS[r.qiraa] === 'default' ? 'outlined' : 'filled'}
                         sx={{
-                          height: 18, fontSize: '0.65rem', fontWeight: 500,
+                          height: 24, fontSize: '0.82rem', fontWeight: 600,
                           '& .MuiChip-label': { px: 0.9 },
                           ...(QIRAA_COLORS[r.qiraa] === 'default' && {
                             borderColor: 'divider',
@@ -174,10 +169,13 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
                       />
                     )}
                   </Box>
+                  {isSelected && (
+                    <CheckCircleIcon sx={{ fontSize: 28, color: 'primary.main', flexShrink: 0 }} />
+                  )}
                   {hasCache ? (
-                    <DownloadDoneIcon sx={{ fontSize: 17, color: 'success.main', opacity: 0.85, flexShrink: 0 }} />
+                    <DownloadDoneIcon sx={{ fontSize: 20, color: 'success.main', opacity: 0.85, flexShrink: 0 }} />
                   ) : offline ? (
-                    <CloudOffIcon sx={{ fontSize: 17, color: 'text.disabled', flexShrink: 0 }} />
+                    <CloudOffIcon sx={{ fontSize: 20, color: 'text.disabled', flexShrink: 0 }} />
                   ) : null}
                 </ListItemButton>
               </Box>
@@ -186,36 +184,6 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
         )}
       </Box>
 
-      {value && (
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
-          px: 1.25, py: 0.75, borderRadius: 2,
-          bgcolor: 'action.hover',
-        }}>
-          <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500 }}>
-            المختار
-          </Typography>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'primary.main' }}>
-            {value.name}
-          </Typography>
-          {value.qiraa && (
-            <Chip
-              label={value.qiraa}
-              size="small"
-              color={QIRAA_COLORS[value.qiraa] || 'default'}
-              variant={QIRAA_COLORS[value.qiraa] === 'default' ? 'outlined' : 'filled'}
-              sx={{
-                height: 18, fontSize: '0.65rem',
-                '& .MuiChip-label': { px: 0.9 },
-                ...(QIRAA_COLORS[value.qiraa] === 'default' && {
-                  borderColor: 'divider',
-                  color: 'text.secondary',
-                }),
-              }}
-            />
-          )}
-        </Box>
-      )}
     </Box>
   );
 }

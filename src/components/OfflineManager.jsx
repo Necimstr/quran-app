@@ -77,7 +77,7 @@ export default function OfflineManager({ reciter, surah }) {
         disabled={!ready || downloading || done}
         color={done ? 'success' : 'primary'}
         sx={{
-          minHeight: 56, fontSize: '0.95rem', fontWeight: 700,
+          minHeight: 60, fontSize: '1.05rem', fontWeight: 800, borderRadius: '14px',
           borderWidth: done ? 0 : 1.5,
           '&:hover': { borderWidth: done ? 0 : 1.5 },
           textAlign: 'start',
@@ -109,7 +109,7 @@ export default function OfflineManager({ reciter, surah }) {
           />
           <Typography sx={{
             mt: 0.5, textAlign: 'center',
-            fontSize: '0.75rem', fontWeight: 500,
+            fontSize: '0.95rem', fontWeight: 600,
             color: 'text.secondary', fontVariantNumeric: 'tabular-nums',
           }}>
             {Math.round(progress * total / 100)} / {total} آية
@@ -118,18 +118,18 @@ export default function OfflineManager({ reciter, surah }) {
       )}
 
       {error && (
-        <Typography color="error" variant="body2" sx={{ fontSize: '0.85rem' }}>{error}</Typography>
+        <Typography color="error" variant="body2" sx={{ fontSize: '1rem' }}>{error}</Typography>
       )}
 
       {!navigator.onLine && (
         <Box sx={{
           display: 'flex', alignItems: 'center', gap: 1,
-          px: 1.5, py: 0.9, borderRadius: 2,
+          px: 1.5, py: 0.9, borderRadius: '14px',
           bgcolor: 'warning.light', color: 'warning.dark',
           border: '1px solid', borderColor: 'warning.main',
         }}>
           <WifiOffIcon sx={{ fontSize: 17 }} />
-          <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>
+          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600 }}>
             غير متصل · يتم تشغيل الصوت المحفوظ
           </Typography>
         </Box>
