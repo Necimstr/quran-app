@@ -198,6 +198,7 @@ export default function App() {
                   surah={surah}
                   startVerse={startVerse}
                   endVerse={endVerse}
+                  ayahsMap={ayahsMap}
                   onSurahChange={handleSurahChange}
                   onStartChange={handleStartChange}
                   onEndChange={setEndVerse}

@@ -1,7 +1,7 @@
 import { FormControl, InputLabel, Select, MenuItem, Box, Typography } from '@mui/material';
 import VerseGrid from './VerseGrid';
 
-export default function RangeSelector({ surahs, surah, startVerse, endVerse, onSurahChange, onStartChange, onEndChange }) {
+export default function RangeSelector({ surahs, surah, startVerse, endVerse, onSurahChange, onStartChange, onEndChange, ayahsMap = {} }) {
   const totalVerses = surah?.numberOfAyahs || 1;
 
   return (
@@ -32,6 +32,7 @@ export default function RangeSelector({ surahs, surah, startVerse, endVerse, onS
         label="من الآية"
         total={totalVerses}
         value={startVerse}
+        ayahsMap={ayahsMap}
         onChange={(v) => {
           onStartChange(v);
           if (v > endVerse) onEndChange(v);
@@ -43,6 +44,7 @@ export default function RangeSelector({ surahs, surah, startVerse, endVerse, onS
         total={totalVerses}
         value={endVerse}
         min={startVerse}
+        ayahsMap={ayahsMap}
         onChange={onEndChange}
       />
     </Box>
