@@ -10,6 +10,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { Chip } from '@mui/material';
+import { QIRAA_COLORS } from '../services/apiService';
 
 const STARRED_KEY = 'quran_starred_reciters';
 
@@ -38,7 +39,7 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
     if (!reciters.length) return [];
     const q = search.trim().toLowerCase();
     const filtered = q
-      ? reciters.filter((r) => r.name.includes(q) || r.englishName.toLowerCase().includes(q))
+      ? reciters.filter((r) => r.name?.includes(q) || r.englishName?.toLowerCase().includes(q))
       : reciters;
     const starSet = new Set(starred);
     return [
@@ -128,7 +129,16 @@ export default function ReciterSelector({ reciters, loading, value, onChange, ca
                   </IconButton>
                   <ListItemText
                     primary={r.name}
+                    secondary={r.qiraa ? (
+                      <Chip
+                        label={r.qiraa}
+                        size="small"
+                        color={QIRAA_COLORS[r.qiraa] || 'default'}
+                        sx={{ height: 18, fontSize: '0.68rem', mt: 0.3 }}
+                      />
+                    ) : null}
                     primaryTypographyProps={{ fontSize: '1rem', fontWeight: isSelected ? 700 : 400 }}
+                    secondaryTypographyProps={{ component: 'div' }}
                   />
                   {hasCache ? (
                     <DownloadDoneIcon sx={{ fontSize: 18, color: 'success.main', opacity: 0.9 }} />

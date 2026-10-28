@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { Box, Typography, ButtonBase, TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 
 // Remove diacritical marks and normalize common Arabic letter variants
@@ -101,12 +100,8 @@ export default function VerseGrid({ label, total, value, onChange, min = 1, ayah
               >
                 {preview || '—'}
               </Typography>
-              {cachedVerses && (
-                isCached ? (
-                  <DownloadDoneIcon sx={{ fontSize: 16, color: selected ? 'inherit' : 'success.main', opacity: 0.8, flexShrink: 0 }} />
-                ) : disableUncached ? (
-                  <CloudOffIcon sx={{ fontSize: 16, color: 'inherit', opacity: 0.6, flexShrink: 0 }} />
-                ) : null
+              {cachedVerses && !isCached && disableUncached && (
+                <CloudOffIcon sx={{ fontSize: 16, color: 'inherit', opacity: 0.6, flexShrink: 0 }} />
               )}
             </ButtonBase>
           );
