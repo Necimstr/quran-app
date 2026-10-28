@@ -102,15 +102,15 @@ export default function PlayerControls({
       )}
 
       {/* Progress slider */}
-      <Box sx={{ px: 0.5 }}>
+      <Box>
         <Slider
           value={progress}
           max={duration || 1}
           onChange={(_, v) => onSeek(v)}
           disabled={!isPlaying && !progress}
-          sx={{ height: 6, '& .MuiSlider-thumb': { width: 20, height: 20 } }}
+          sx={{ height: 6, '& .MuiSlider-thumb': { width: 20, height: 20 }, display: 'block' }}
         />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: -0.5 }}>
+        <Box dir="ltr" sx={{ display: 'flex', justifyContent: 'space-between', mt: -0.5, px: '10px' }}>
           <Typography variant="caption" color="text.secondary">{formatTime(progress)}</Typography>
           <Typography variant="caption" color="text.secondary">{formatTime(duration)}</Typography>
         </Box>
@@ -145,7 +145,7 @@ export default function PlayerControls({
           disabled={!isPlaying}
           sx={{ bgcolor: 'grey.100', width: 56, height: 56, '&:hover': { bgcolor: 'grey.200' } }}
         >
-          <SkipPreviousIcon sx={{ fontSize: 30 }} />
+          <SkipNextIcon sx={{ fontSize: 30 }} />
         </IconButton>
 
         {loading ? (
@@ -169,7 +169,7 @@ export default function PlayerControls({
           disabled={!isPlaying}
           sx={{ bgcolor: 'grey.100', width: 56, height: 56, '&:hover': { bgcolor: 'grey.200' } }}
         >
-          <SkipNextIcon sx={{ fontSize: 30 }} />
+          <SkipPreviousIcon sx={{ fontSize: 30 }} />
         </IconButton>
 
         <Box sx={{ width: 52 }} />
@@ -186,7 +186,7 @@ export default function PlayerControls({
           onChange={(_, v) => onVolumeChange(v)}
           sx={{ height: 6, '& .MuiSlider-thumb': { width: 18, height: 18 } }}
         />
-        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 32, textAlign: 'left' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 32 }}>
           {Math.round(volume * 100)}%
         </Typography>
       </Box>
