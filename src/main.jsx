@@ -98,6 +98,7 @@ function buildTheme(mode) {
           root: {
             backgroundImage: 'none',
             backgroundColor: dark ? '#0a1412' : '#00695c',
+            borderRadius: '0 0 16px 16px',
             boxShadow: dark
               ? '0 1px 0 rgba(255,255,255,0.06)'
               : '0 1px 2px rgba(0,0,0,0.08)',
