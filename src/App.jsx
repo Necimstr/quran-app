@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   AppBar, Toolbar, Typography, Container, Box, Paper,
-  CircularProgress, Alert, Tabs, Tab,
+  CircularProgress, Alert, Tabs, Tab, IconButton, Tooltip,
 } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
 import MicIcon from '@mui/icons-material/Mic';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import RepeatIcon from '@mui/icons-material/Repeat';
@@ -17,6 +18,9 @@ import PlayerControls from './components/PlayerControls';
 import OfflineManager from './components/OfflineManager';
 import BookmarkManager from './components/BookmarkManager';
 import InstallPrompt from './components/InstallPrompt';
+import HelpDialog from './components/HelpDialog';
+
+const HELP_SEEN_KEY = 'quran_help_seen';
 
 const SESSION_KEY = 'quran_session';
 
@@ -38,6 +42,8 @@ export default function App() {
   const [tab, setTab] = useState(0);
   const [online, setOnline] = useState(navigator.onLine);
   const [cachedVerses, setCachedVerses] = useState(new Set());
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
 
   const session = loadSession();
 
@@ -74,6 +80,24 @@ export default function App() {
       .catch(() => {})
       .finally(() => setLoadingReciters(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem(HELP_SEEN_KEY)) {
+      const t = setTimeout(() => setHintOpen(true), 1500);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const openHelp = useCallback(() => {
+    setHelpOpen(true);
+    setHintOpen(false);
+    localStorage.setItem(HELP_SEEN_KEY, '1');
+  }, []);
+
+  const dismissHint = useCallback(() => {
+    setHintOpen(false);
+    localStorage.setItem(HELP_SEEN_KEY, '1');
   }, []);
 
   useEffect(() => {
@@ -153,6 +177,18 @@ export default function App() {
           <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1, letterSpacing: 0.5 }}>
             حفظ القرآن الكريم
           </Typography>
+          <Tooltip
+            open={hintOpen}
+            onClose={dismissHint}
+            title="اضغط هنا لمعرفة كيفية استخدام التطبيق"
+            arrow
+            placement="bottom"
+            PopperProps={{ sx: { '& .MuiTooltip-tooltip': { fontSize: '0.85rem', bgcolor: 'secondary.main' }, '& .MuiTooltip-arrow': { color: 'secondary.main' } } }}
+          >
+            <IconButton onClick={openHelp} sx={{ color: 'inherit', mr: 0.5 }} aria-label="المساعدة">
+              <HelpOutlineIcon />
+            </IconButton>
+          </Tooltip>
           <Typography variant="body1" sx={{ opacity: 0.85, fontFamily: '"Noto Naskh Arabic", serif', fontSize: '1.1rem' }}>
             بِسْمِ اللَّهِ
           </Typography>
@@ -274,6 +310,7 @@ export default function App() {
         )}
       </Container>
       <InstallPrompt />
+      <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </Box>
   );
 }

@@ -3,18 +3,10 @@ import { Snackbar, Alert, Button, Dialog, DialogTitle, DialogContent, DialogActi
 import GetAppIcon from '@mui/icons-material/GetApp';
 import IosShareIcon from '@mui/icons-material/IosShare';
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 const DISMISS_KEY = 'pwa_install_dismissed_at';
 const DISMISS_DAYS = 7;
-
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
-}
-
-function isIos() {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !window.MSStream;
-}
 
 function recentlyDismissed() {
   const t = Number(localStorage.getItem(DISMISS_KEY) || 0);
@@ -23,41 +15,19 @@ function recentlyDismissed() {
 }
 
 export default function InstallPrompt() {
-  const [deferred, setDeferred] = useState(null);
+  const { canInstall, installed, ios, promptInstall } = useInstallPrompt();
   const [open, setOpen] = useState(false);
   const [iosOpen, setIosOpen] = useState(false);
 
   useEffect(() => {
-    if (isStandalone() || recentlyDismissed()) return;
-
-    const onPrompt = (e) => {
-      e.preventDefault();
-      setDeferred(e);
+    if (installed || recentlyDismissed()) return;
+    if (canInstall) {
       setOpen(true);
-    };
-    window.addEventListener('beforeinstallprompt', onPrompt);
-
-    const onInstalled = () => {
-      setOpen(false);
-      setDeferred(null);
-      localStorage.removeItem(DISMISS_KEY);
-    };
-    window.addEventListener('appinstalled', onInstalled);
-
-    if (isIos()) {
+    } else if (ios) {
       const t = setTimeout(() => setOpen(true), 2500);
-      return () => {
-        clearTimeout(t);
-        window.removeEventListener('beforeinstallprompt', onPrompt);
-        window.removeEventListener('appinstalled', onInstalled);
-      };
+      return () => clearTimeout(t);
     }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
-  }, []);
+  }, [canInstall, installed, ios]);
 
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
@@ -65,13 +35,11 @@ export default function InstallPrompt() {
   };
 
   const install = async () => {
-    if (deferred) {
-      deferred.prompt();
-      const { outcome } = await deferred.userChoice;
+    if (canInstall) {
+      const outcome = await promptInstall();
       if (outcome === 'dismissed') dismiss();
-      setDeferred(null);
       setOpen(false);
-    } else if (isIos()) {
+    } else if (ios) {
       setIosOpen(true);
     }
   };
