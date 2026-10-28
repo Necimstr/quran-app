@@ -167,6 +167,28 @@ export default function App() {
     if (s) { setSurah(s); setStartVerse(bm.startVerse); setEndVerse(bm.endVerse); }
   }, [reciters, surahs]);
 
+  // Play a saved surah from the offline library through the same player
+  // (same audio element, so lock-screen / background playback applies too).
+  // Playback starts in an effect, after the new selection has reached the player.
+  const [playRequest, setPlayRequest] = useState(0);
+  const { play: playerPlay, stop: playerStop } = player;
+  const handlePlayOffline = useCallback(({ reciterId, surahNumber, start, end }) => {
+    const r = reciters.find((x) => x.id === reciterId);
+    const s = surahs.find((x) => x.number === surahNumber);
+    if (!r || !s) return;
+    playerStop();
+    setReciter(r);
+    setSurah(s);
+    setStartVerse(start);
+    setEndVerse(end);
+    setPlayRequest((n) => n + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [reciters, surahs, playerStop]);
+
+  useEffect(() => {
+    if (playRequest) playerPlay();
+  }, [playRequest, playerPlay]);
+
   const TABS = [
     { label: 'القارئ', icon: <MicIcon sx={{ fontSize: 20 }} /> },
     { label: 'السورة', icon: <MenuBookOutlinedIcon sx={{ fontSize: 20 }} /> },
@@ -231,6 +253,7 @@ export default function App() {
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
               <PlayerControls
                 isPlaying={player.isPlaying}
+                isActive={player.isActive}
                 currentVerse={player.currentVerse}
                 verseCount={player.verseCount}
                 groupCount={player.groupCount}
@@ -341,7 +364,12 @@ export default function App() {
                       surah={surah}
                     />
                     <Box sx={{ mt: 2 }}>
-                      <OfflineLibrary reciters={reciters} surahs={surahs} />
+                      <OfflineLibrary
+                        reciters={reciters}
+                        surahs={surahs}
+                        activeKey={player.isActive && reciter && surah ? `${reciter.id}:${surah.number}` : null}
+                        onPlay={handlePlayOffline}
+                      />
                     </Box>
                   </Box>
                 </Box>

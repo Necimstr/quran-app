@@ -7,9 +7,18 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import MicIcon from '@mui/icons-material/Mic';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { listCachedDetailed, deleteCachedSurah, deleteCachedReciter } from '../hooks/useQuranPlayer';
 
-export default function OfflineLibrary({ reciters = [], surahs = [] }) {
+// First contiguous run of saved ayahs, so an incomplete surah still plays fully offline
+function playableRange(set) {
+  const start = Math.min(...set);
+  let end = start;
+  while (set.has(end + 1)) end++;
+  return { start, end };
+}
+
+export default function OfflineLibrary({ reciters = [], surahs = [], activeKey = null, onPlay }) {
   const [data, setData] = useState({});
   const [confirm, setConfirm] = useState(null);
   const [open, setOpen] = useState(false);
@@ -139,33 +148,25 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
                   const surah = surahByNumber[num];
                   const total = surah?.numberOfAyahs ?? set.size;
                   const complete = set.size >= total;
+                  const active = activeKey === `${e.id}:${num}`;
+                  const canPlay = !!onPlay && !!surah && !!reciterById[e.id];
+                  const label = surah?.name || `سورة ${num}`;
                   return (
-                    <ListItem
-                      key={num}
-                      divider
-                      secondaryAction={
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={() => setConfirm({
-                            type: 'surah',
-                            reciterId: e.id,
-                            surahNumber: num,
-                            name: `${surah?.name || num} (${e.name})`,
-                          })}
-                          sx={{ color: 'error.main' }}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      }
-                      sx={{ py: 0.75 }}
-                    >
+                    <ListItem key={num} divider sx={{ py: 0.75, gap: 0.5 }}>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                             <Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                              {num}. {surah?.name || `سورة ${num}`}
+                              {num}. {label}
                             </Typography>
+                            {active && (
+                              <Chip
+                                label="قيد التشغيل"
+                                size="small"
+                                color="primary"
+                                sx={{ height: 20, fontSize: '0.7rem' }}
+                              />
+                            )}
                             {!complete && (
                               <Chip
                                 label="غير مكتملة"
@@ -177,6 +178,28 @@ export default function OfflineLibrary({ reciters = [], surahs = [] }) {
                           </Box>
                         }
                       />
+                      <IconButton
+                        size="small"
+                        disabled={!canPlay}
+                        onClick={() => onPlay({ reciterId: e.id, surahNumber: num, ...playableRange(set) })}
+                        aria-label={`تشغيل ${label} — ${e.name}`}
+                        sx={{ color: 'primary.main' }}
+                      >
+                        <PlayArrowIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => setConfirm({
+                          type: 'surah',
+                          reciterId: e.id,
+                          surahNumber: num,
+                          name: `${label} (${e.name})`,
+                        })}
+                        aria-label={`حذف ${label}`}
+                        sx={{ color: 'error.main' }}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
                     </ListItem>
                   );
                 })}
