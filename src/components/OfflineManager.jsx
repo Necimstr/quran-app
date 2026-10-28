@@ -37,7 +37,7 @@ export default function OfflineManager({ reciter, surah, startVerse, endVerse })
         completed++;
         setProgress(Math.round((completed / total) * 100));
       } catch (e) {
-        setError(`Failed at verse ${v}: ${e.message}`);
+        setError(`فشل تحميل الآية ${v}: ${e.message}`);
         setDownloading(false);
         return;
       }
@@ -59,17 +59,17 @@ export default function OfflineManager({ reciter, surah, startVerse, endVerse })
         sx={{ minHeight: 56, fontSize: '1rem', fontWeight: 600 }}
       >
         {done
-          ? 'Cached for Offline Use'
+          ? 'تم الحفظ للاستخدام بدون إنترنت'
           : downloading
-          ? `Downloading... ${progress}%`
-          : 'Download / Cache Surah Audio'}
+          ? `جارٍ التحميل... ${progress}%`
+          : 'تحميل السورة للاستماع بدون إنترنت'}
       </Button>
 
       {downloading && (
         <Box>
           <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4 }} />
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, textAlign: 'center' }}>
-            {Math.round(progress * total / 100)} / {total} verses cached
+            {Math.round(progress * total / 100)} / {total} آيات محفوظة
           </Typography>
         </Box>
       )}
@@ -81,7 +81,7 @@ export default function OfflineManager({ reciter, surah, startVerse, endVerse })
       {!navigator.onLine && (
         <Chip
           icon={<WifiOffIcon />}
-          label="Offline — using cached audio"
+          label="غير متصل — يتم تشغيل الصوت المحفوظ"
           color="warning"
           sx={{ fontSize: '0.9rem', height: 36 }}
         />

@@ -90,7 +90,7 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
       setLoading(false);
     } catch (e) {
       setLoading(false);
-      setError('Failed to load audio. Check your connection.');
+      setError('تعذّر تحميل الصوت. تحقق من اتصالك بالإنترنت.');
     }
   }, []);
 

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
   AppBar, Toolbar, Typography, Container, Box, Paper,
-  Divider, CircularProgress, Alert,
+  CircularProgress, Alert,
 } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import { fetchSurahs, RECITERS } from './services/apiService';
+import { fetchSurahs, fetchReciters } from './services/apiService';
 import { useQuranPlayer } from './hooks/useQuranPlayer';
 import ReciterSelector from './components/ReciterSelector';
 import RangeSelector from './components/RangeSelector';
@@ -14,7 +14,10 @@ import OfflineManager from './components/OfflineManager';
 
 function SectionTitle({ children }) {
   return (
-    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.8rem', mb: 1 }}>
+    <Typography variant="subtitle1" sx={{
+      fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5,
+      fontSize: '0.78rem', mb: 1,
+    }}>
       {children}
     </Typography>
   );
@@ -22,10 +25,12 @@ function SectionTitle({ children }) {
 
 export default function App() {
   const [surahs, setSurahs] = useState([]);
+  const [reciters, setReciters] = useState([]);
   const [loadingSurahs, setLoadingSurahs] = useState(true);
+  const [loadingReciters, setLoadingReciters] = useState(true);
   const [surahsError, setSurahsError] = useState(null);
 
-  const [reciter, setReciter] = useState(RECITERS[0]);
+  const [reciter, setReciter] = useState(null);
   const [surah, setSurah] = useState(null);
   const [startVerse, setStartVerse] = useState(1);
   const [endVerse, setEndVerse] = useState(7);
@@ -39,8 +44,16 @@ export default function App() {
         setSurah(data[0]);
         setEndVerse(data[0].numberOfAyahs);
       })
-      .catch(() => setSurahsError('Failed to load Surah list. Check your connection.'))
+      .catch(() => setSurahsError('فشل تحميل قائمة السور. تحقق من اتصالك بالإنترنت.'))
       .finally(() => setLoadingSurahs(false));
+
+    fetchReciters()
+      .then((data) => {
+        setReciters(data);
+        setReciter(data.find((r) => r.id === 'ar.alafasy') || data[0]);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingReciters(false));
   }, []);
 
   function handleSurahChange(s) {
@@ -58,22 +71,24 @@ export default function App() {
     reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat,
   });
 
+  const loading = loadingSurahs;
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'primary.main' }}>
         <Toolbar>
-          <MenuBookIcon sx={{ mr: 1.5, fontSize: 28 }} />
+          <MenuBookIcon sx={{ ml: 1.5, fontSize: 28 }} />
           <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1, letterSpacing: 0.5 }}>
-            Quran Memorization
+            حفظ القرآن الكريم
           </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.8, fontFamily: 'serif', fontSize: '1rem' }}>
-            القرآن الكريم
+          <Typography variant="body1" sx={{ opacity: 0.85, fontFamily: '"Noto Naskh Arabic", serif', fontSize: '1.1rem' }}>
+            بِسْمِ اللَّهِ
           </Typography>
         </Toolbar>
       </AppBar>
 
       <Container maxWidth="sm" sx={{ py: 3, px: 2 }}>
-        {loadingSurahs ? (
+        {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
             <CircularProgress size={56} />
           </Box>
@@ -82,9 +97,8 @@ export default function App() {
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
-            {/* Player Controls — always on top for quick access */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>Player</SectionTitle>
+              <SectionTitle>مشغّل الصوت</SectionTitle>
               <PlayerControls
                 isPlaying={player.isPlaying}
                 currentVerse={player.currentVerse}
@@ -107,15 +121,18 @@ export default function App() {
               />
             </Paper>
 
-            {/* Reciter */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>Reciter</SectionTitle>
-              <ReciterSelector value={reciter} onChange={setReciter} />
+              <SectionTitle>القارئ</SectionTitle>
+              <ReciterSelector
+                reciters={reciters}
+                loading={loadingReciters}
+                value={reciter}
+                onChange={setReciter}
+              />
             </Paper>
 
-            {/* Surah & Verse Range */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>Surah & Verse Range</SectionTitle>
+              <SectionTitle>السورة ونطاق الآيات</SectionTitle>
               <RangeSelector
                 surahs={surahs}
                 surah={surah}
@@ -127,9 +144,8 @@ export default function App() {
               />
             </Paper>
 
-            {/* Repetition */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>Repetition</SectionTitle>
+              <SectionTitle>إعدادات التكرار</SectionTitle>
               <RepeatSettings
                 verseRepeat={verseRepeat}
                 groupRepeat={groupRepeat}
@@ -138,9 +154,8 @@ export default function App() {
               />
             </Paper>
 
-            {/* Offline */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>Offline Access</SectionTitle>
+              <SectionTitle>الاستماع بدون إنترنت</SectionTitle>
               <OfflineManager
                 reciter={reciter}
                 surah={surah}

@@ -29,25 +29,25 @@ export default function PlayerControls({
       }}>
         {isPlaying || loading ? (
           <>
-            <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-              {surah?.englishName} — Verse {currentVerse}
+            <Typography variant="h5" sx={{ fontWeight: 700, lineHeight: 1.4 }}>
+              سورة {surah?.name} — الآية {currentVerse}
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" justifyContent="center">
               <Chip
-                label={`Verse rep: ${verseCount + 1}/${verseRepeat}`}
+                label={`تكرار الآية: ${verseCount + 1}/${verseRepeat}`}
                 size="small"
                 sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'inherit', fontSize: '0.85rem' }}
               />
               <Chip
-                label={groupRepeat === 0 ? 'Group: ∞' : `Group: ${groupCount + 1}/${groupRepeat}`}
+                label={groupRepeat === 0 ? 'تكرار المجموعة: ∞' : `تكرار المجموعة: ${groupCount + 1}/${groupRepeat}`}
                 size="small"
                 sx={{ bgcolor: 'rgba(255,255,255,0.25)', color: 'inherit', fontSize: '0.85rem' }}
               />
             </Stack>
           </>
         ) : (
-          <Typography variant="h6" sx={{ opacity: 0.8 }}>
-            {ready ? `${surah.englishName} · Verses ${startVerse}–${endVerse}` : 'Select Surah to begin'}
+          <Typography variant="h6" sx={{ opacity: 0.85, lineHeight: 1.5 }}>
+            {ready ? `سورة ${surah.name} · الآيات ${startVerse}–${endVerse}` : 'اختر السورة للبدء'}
           </Typography>
         )}
       </Box>
@@ -97,7 +97,7 @@ export default function PlayerControls({
           </IconButton>
         )}
 
-        <Box sx={{ width: 64 }} /> {/* spacer to center play button */}
+        <Box sx={{ width: 64 }} />
       </Box>
     </Box>
   );

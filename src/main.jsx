@@ -4,6 +4,7 @@ import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
 import App from './App.jsx';
 
 const theme = createTheme({
+  direction: 'rtl',
   palette: {
     primary: {
       main: '#00695c',      // dark teal — high contrast, calming
@@ -23,7 +24,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif',
+    fontFamily: '"Noto Naskh Arabic", "Segoe UI", "Arial", sans-serif',
     fontSize: 16,
     h5: { fontWeight: 700 },
     h6: { fontWeight: 600 },
