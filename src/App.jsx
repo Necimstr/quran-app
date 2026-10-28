@@ -158,6 +158,7 @@ export default function App() {
                 onResume={player.resume}
                 onStop={player.stop}
                 onSeek={player.seek}
+                reciter={reciter}
                 onSkipNext={player.skipNext}
                 onSkipPrev={player.skipPrev}
                 onSpeedChange={player.setSpeed}

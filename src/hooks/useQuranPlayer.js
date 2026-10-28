@@ -141,26 +141,30 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
   }, []);
 
   const playSequence = useCallback(async () => {
-    const { reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat } = stateRef.current;
+    const { reciter, surah, startVerse, endVerse } = stateRef.current;
     if (!reciter || !surah) return;
 
     stopRequestedRef.current = false;
     playingRef.current = true;
     setIsPlaying(true);
 
-    const infinite = groupRepeat === 0;
     let gCount = 0;
 
     try {
-      outer: while (infinite || gCount < groupRepeat) {
-        setGroupCount(gCount);
-        let v = startVerse;
+      outer: while (true) {
+        const { groupRepeat } = stateRef.current;
+        const infinite = groupRepeat === 0;
+        if (!infinite && gCount >= groupRepeat) break;
 
-        while (v <= endVerse) {
+        setGroupCount(gCount);
+        let v = stateRef.current.startVerse;
+
+        while (v <= stateRef.current.endVerse) {
           if (stopRequestedRef.current) break outer;
           setCurrentVerse(v);
 
           let nextV = v + 1;
+          const { verseRepeat } = stateRef.current;
 
           for (let r = 0; r < verseRepeat; r++) {
             if (stopRequestedRef.current) break outer;

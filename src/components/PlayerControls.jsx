@@ -20,7 +20,7 @@ export default function PlayerControls({
   isPlaying, currentVerse, verseCount, groupCount,
   verseRepeat, groupRepeat, surah, startVerse, endVerse,
   progress, duration, loading, error, verseText,
-  speed, volume,
+  speed, volume, reciter,
   onPlay, onPause, onResume, onStop, onSeek,
   onSkipNext, onSkipPrev, onSpeedChange, onVolumeChange,
 }) {
@@ -63,9 +63,37 @@ export default function PlayerControls({
             </Stack>
           </>
         ) : (
-          <Typography variant="h6" sx={{ opacity: 0.85, lineHeight: 1.6 }}>
-            {ready ? `سورة ${surah.name} · الآيات ${startVerse}–${endVerse}` : 'اختر السورة للبدء'}
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.8 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.4 }}>
+              {ready ? `سورة ${surah.name}` : 'اختر السورة للبدء'}
+            </Typography>
+            {ready && (
+              <>
+                <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                  الآيات {startVerse} – {endVerse}
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center" sx={{ mt: 0.5 }}>
+                  {reciter && (
+                    <Chip
+                      label={reciter.name}
+                      size="small"
+                      sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'inherit', fontSize: '0.78rem' }}
+                    />
+                  )}
+                  <Chip
+                    label={`تكرار الآية: ${verseRepeat}×`}
+                    size="small"
+                    sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'inherit', fontSize: '0.78rem' }}
+                  />
+                  <Chip
+                    label={groupRepeat === 0 ? 'تكرار المجموعة: ∞' : `تكرار المجموعة: ${groupRepeat}×`}
+                    size="small"
+                    sx={{ bgcolor: 'rgba(255,255,255,0.22)', color: 'inherit', fontSize: '0.78rem' }}
+                  />
+                </Stack>
+              </>
+            )}
+          </Box>
         )}
       </Box>
 
