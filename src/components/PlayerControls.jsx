@@ -32,6 +32,7 @@ function formatTime(s) {
 
 export default function PlayerControls({
   isPlaying,
+  isActive,
   currentVerse,
   verseCount,
   groupCount,
@@ -96,7 +97,7 @@ export default function PlayerControls({
           },
         })}
       >
-        {isPlaying || loading ? (
+        {isActive || loading ? (
           <>
             <Typography
               sx={{
@@ -128,6 +129,21 @@ export default function PlayerControls({
               justifyContent="center"
               sx={{ mt: 0.25 }}
             >
+              {!isPlaying && !loading && (
+                <Chip
+                  icon={<PauseIcon sx={{ fontSize: 14, color: "inherit !important" }} />}
+                  label="متوقف مؤقتًا"
+                  size="small"
+                  sx={{
+                    bgcolor: "rgba(255,255,255,0.24)",
+                    color: "inherit",
+                    fontSize: "0.72rem",
+                    height: 22,
+                    fontFamily: "inherit",
+                    backdropFilter: "blur(4px)",
+                  }}
+                />
+              )}
               <Chip
                 label={`الآية ${verseCount + 1}/${verseRepeat}`}
                 size="small"
@@ -252,7 +268,7 @@ export default function PlayerControls({
           value={progress}
           max={duration || 1}
           onChange={(_, v) => onSeek(v)}
-          disabled={!isPlaying && !progress}
+          disabled={!isActive}
           sx={{ display: "block" }}
         />
         <Box
@@ -347,7 +363,7 @@ export default function PlayerControls({
       >
         <IconButton
           onClick={onStop}
-          disabled={!isPlaying && !progress}
+          disabled={!isActive}
           aria-label="إيقاف"
           sx={{
             bgcolor: "action.selected",
@@ -366,7 +382,7 @@ export default function PlayerControls({
 
         <IconButton
           onClick={onSkipPrev}
-          disabled={!isPlaying}
+          disabled={!isActive}
           aria-label="السابق"
           sx={{
             bgcolor: "action.hover",
@@ -393,7 +409,7 @@ export default function PlayerControls({
           </Box>
         ) : (
           <IconButton
-            onClick={isPlaying ? onPause : progress > 0 ? onResume : onPlay}
+            onClick={isPlaying ? onPause : isActive ? onResume : onPlay}
             disabled={!ready}
             aria-label={isPlaying ? "إيقاف مؤقت" : "تشغيل"}
             sx={(theme) => ({
@@ -434,7 +450,7 @@ export default function PlayerControls({
 
         <IconButton
           onClick={onSkipNext}
-          disabled={!isPlaying}
+          disabled={!isActive}
           aria-label="التالي"
           sx={{
             bgcolor: "action.hover",
