@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   AppBar, Toolbar, Typography, Container, Box, Paper,
-  CircularProgress, Alert,
+  CircularProgress, Alert, Tabs, Tab,
 } from '@mui/material';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-import { fetchSurahs, fetchReciters, fetchSurahAyahs, RECITERS } from './services/apiService';
+import MicIcon from '@mui/icons-material/Mic';
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
+import RepeatIcon from '@mui/icons-material/Repeat';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import { fetchSurahs, fetchReciters, fetchSurahAyahs } from './services/apiService';
 import { useQuranPlayer } from './hooks/useQuranPlayer';
 import ReciterSelector from './components/ReciterSelector';
 import RangeSelector from './components/RangeSelector';
@@ -12,7 +16,6 @@ import RepeatSettings from './components/RepeatSettings';
 import PlayerControls from './components/PlayerControls';
 import OfflineManager from './components/OfflineManager';
 import BookmarkManager from './components/BookmarkManager';
-import SleepTimer from './components/SleepTimer';
 
 const SESSION_KEY = 'quran_session';
 
@@ -24,17 +27,6 @@ function saveSession(data) {
   localStorage.setItem(SESSION_KEY, JSON.stringify(data));
 }
 
-function SectionTitle({ children }) {
-  return (
-    <Typography variant="subtitle1" sx={{
-      fontWeight: 700, color: 'text.secondary',
-      fontSize: '0.78rem', mb: 1, letterSpacing: 0.3,
-    }}>
-      {children}
-    </Typography>
-  );
-}
-
 export default function App() {
   const [surahs, setSurahs] = useState([]);
   const [reciters, setReciters] = useState([]);
@@ -42,6 +34,7 @@ export default function App() {
   const [loadingReciters, setLoadingReciters] = useState(true);
   const [surahsError, setSurahsError] = useState(null);
   const [ayahsMap, setAyahsMap] = useState({});
+  const [tab, setTab] = useState(0);
 
   const session = loadSession();
 
@@ -52,20 +45,16 @@ export default function App() {
   const [verseRepeat, setVerseRepeat] = useState(session.verseRepeat || 1);
   const [groupRepeat, setGroupRepeat] = useState(session.groupRepeat || 1);
 
-  // Persist session on every setting change
   useEffect(() => {
     if (!reciter || !surah) return;
     saveSession({ reciterId: reciter.id, surahNumber: surah.number, startVerse, endVerse, verseRepeat, groupRepeat });
   }, [reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat]);
 
-  // Fetch surahs and reciters on mount
   useEffect(() => {
     fetchSurahs()
       .then((data) => {
         setSurahs(data);
-        const savedSurah = session.surahNumber
-          ? data.find((s) => s.number === session.surahNumber)
-          : null;
+        const savedSurah = session.surahNumber ? data.find((s) => s.number === session.surahNumber) : null;
         const defaultSurah = savedSurah || data[0];
         setSurah(defaultSurah);
         if (!session.endVerse) setEndVerse(defaultSurah.numberOfAyahs);
@@ -84,7 +73,6 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch Arabic verse texts when surah changes
   useEffect(() => {
     if (!surah) return;
     fetchSurahAyahs(surah.number)
@@ -109,20 +97,22 @@ export default function App() {
 
   const player = useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat });
 
-  // Load a bookmark
   const handleLoadBookmark = useCallback((bm) => {
     const r = reciters.find((x) => x.id === bm.reciterId);
     const s = surahs.find((x) => x.number === bm.surahNumber);
     if (r) setReciter(r);
-    if (s) {
-      setSurah(s);
-      setStartVerse(bm.startVerse);
-      setEndVerse(bm.endVerse);
-    }
+    if (s) { setSurah(s); setStartVerse(bm.startVerse); setEndVerse(bm.endVerse); }
   }, [reciters, surahs]);
 
+  const TABS = [
+    { label: 'القارئ', icon: <MicIcon sx={{ fontSize: 20 }} /> },
+    { label: 'السورة', icon: <MenuBookOutlinedIcon sx={{ fontSize: 20 }} /> },
+    { label: 'التكرار', icon: <RepeatIcon sx={{ fontSize: 20 }} /> },
+    { label: 'المحفوظات', icon: <BookmarkIcon sx={{ fontSize: 20 }} /> },
+  ];
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'primary.main' }}>
         <Toolbar>
           <MenuBookIcon sx={{ ml: 1.5, fontSize: 28 }} />
@@ -135,7 +125,7 @@ export default function App() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="sm" sx={{ py: 3, px: 2 }}>
+      <Container maxWidth="sm" sx={{ py: 2, px: 2, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
         {loadingSurahs ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
             <CircularProgress size={56} />
@@ -143,10 +133,9 @@ export default function App() {
         ) : surahsError ? (
           <Alert severity="error" sx={{ mt: 4, fontSize: '1rem' }}>{surahsError}</Alert>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-
+          <>
+            {/* Player — always visible */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>مشغّل الصوت</SectionTitle>
               <PlayerControls
                 isPlaying={player.isPlaying}
                 currentVerse={player.currentVerse}
@@ -176,66 +165,76 @@ export default function App() {
               />
             </Paper>
 
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>القارئ</SectionTitle>
-              <ReciterSelector
-                reciters={reciters}
-                loading={loadingReciters}
-                value={reciter}
-                onChange={setReciter}
-              />
+            {/* Tab bar */}
+            <Paper elevation={1} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+              <Tabs
+                value={tab}
+                onChange={(_, v) => setTab(v)}
+                variant="fullWidth"
+                sx={{
+                  '& .MuiTab-root': { fontSize: '0.78rem', minHeight: 56, gap: 0.5 },
+                  '& .MuiTabs-indicator': { height: 3, borderRadius: 2 },
+                }}
+              >
+                {TABS.map((t, i) => (
+                  <Tab key={i} label={t.label} icon={t.icon} iconPosition="top" />
+                ))}
+              </Tabs>
             </Paper>
 
+            {/* Tab content */}
             <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>السورة ونطاق الآيات</SectionTitle>
-              <RangeSelector
-                surahs={surahs}
-                surah={surah}
-                startVerse={startVerse}
-                endVerse={endVerse}
-                onSurahChange={handleSurahChange}
-                onStartChange={handleStartChange}
-                onEndChange={setEndVerse}
-              />
+              {tab === 0 && (
+                <ReciterSelector
+                  reciters={reciters}
+                  loading={loadingReciters}
+                  value={reciter}
+                  onChange={setReciter}
+                />
+              )}
+              {tab === 1 && (
+                <RangeSelector
+                  surahs={surahs}
+                  surah={surah}
+                  startVerse={startVerse}
+                  endVerse={endVerse}
+                  onSurahChange={handleSurahChange}
+                  onStartChange={handleStartChange}
+                  onEndChange={setEndVerse}
+                />
+              )}
+              {tab === 2 && (
+                <RepeatSettings
+                  verseRepeat={verseRepeat}
+                  groupRepeat={groupRepeat}
+                  onVerseRepeatChange={setVerseRepeat}
+                  onGroupRepeatChange={setGroupRepeat}
+                />
+              )}
+              {tab === 3 && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <BookmarkManager
+                    reciter={reciter}
+                    surah={surah}
+                    startVerse={startVerse}
+                    endVerse={endVerse}
+                    onLoad={handleLoadBookmark}
+                  />
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.78rem', mb: 1.5 }}>
+                      الاستماع بدون إنترنت
+                    </Typography>
+                    <OfflineManager
+                      reciter={reciter}
+                      surah={surah}
+                      startVerse={startVerse}
+                      endVerse={endVerse}
+                    />
+                  </Box>
+                </Box>
+              )}
             </Paper>
-
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>إعدادات التكرار</SectionTitle>
-              <RepeatSettings
-                verseRepeat={verseRepeat}
-                groupRepeat={groupRepeat}
-                onVerseRepeatChange={setVerseRepeat}
-                onGroupRepeatChange={setGroupRepeat}
-              />
-            </Paper>
-
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>مؤقت النوم</SectionTitle>
-              <SleepTimer onExpire={player.stop} />
-            </Paper>
-
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>الإشارات المرجعية</SectionTitle>
-              <BookmarkManager
-                reciter={reciter}
-                surah={surah}
-                startVerse={startVerse}
-                endVerse={endVerse}
-                onLoad={handleLoadBookmark}
-              />
-            </Paper>
-
-            <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3 }}>
-              <SectionTitle>الاستماع بدون إنترنت</SectionTitle>
-              <OfflineManager
-                reciter={reciter}
-                surah={surah}
-                startVerse={startVerse}
-                endVerse={endVerse}
-              />
-            </Paper>
-
-          </Box>
+          </>
         )}
       </Container>
     </Box>
