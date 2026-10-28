@@ -1,4 +1,4 @@
-import { Box, IconButton, Slider, Typography, CircularProgress, ButtonBase } from "@mui/material";
+import { Box, IconButton, LinearProgress, Typography, CircularProgress, ButtonBase } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import StopIcon from "@mui/icons-material/Stop";
@@ -182,6 +182,7 @@ export default function PlayerControls({
   progress,
   duration,
   loading,
+  preparing,
   error,
   verseText,
   reciter,
@@ -189,7 +190,6 @@ export default function PlayerControls({
   onPause,
   onResume,
   onStop,
-  onSeek,
   onSkipNext,
   onSkipPrev,
 }) {
@@ -198,7 +198,7 @@ export default function PlayerControls({
   const paused = isActive && !isPlaying && !loading;
   const total = endVerse - startVerse + 1;
 
-  const mainLabel = loading ? "جارٍ التحميل" : isPlaying ? "إيقاف مؤقت" : isActive ? "متابعة" : "ابدأ التلاوة";
+  const mainLabel = loading ? "جارٍ التجهيز" : isPlaying ? "إيقاف مؤقت" : isActive ? "متابعة" : "ابدأ التلاوة";
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2.75 }}>
@@ -227,6 +227,22 @@ export default function PlayerControls({
                 {verseText}
               </Typography>
             ) : null}
+            {preparing && (
+              <Box sx={{ width: "100%", maxWidth: 260, mt: 0.5 }} role="status">
+                <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: "rgba(255,255,255,0.92)", mb: 1 }}>
+                  جارٍ تجهيز التلاوة · {preparing.done} من {preparing.total}
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={(preparing.done / preparing.total) * 100}
+                  aria-label="تجهيز التلاوة"
+                  sx={{
+                    height: 6, borderRadius: 999, bgcolor: "rgba(255,255,255,0.18)",
+                    "& .MuiLinearProgress-bar": { borderRadius: 999, bgcolor: "#f3d38b" },
+                  }}
+                />
+              </Box>
+            )}
             <Box
               sx={{
                 display: "flex",
@@ -320,14 +336,14 @@ export default function PlayerControls({
         </Box>
       )}
 
-      {isActive && (
+      {isActive && !preparing && (
         <Box sx={{ px: 0.5 }}>
-          <Slider
-            value={progress}
-            max={duration || 1}
-            onChange={(_, v) => onSeek(v)}
-            aria-label="موضع التلاوة"
-            sx={{ display: "block", py: 1.5 }}
+          {/* Display only: the joined recitation file can't be seeked reliably */}
+          <LinearProgress
+            variant="determinate"
+            value={duration ? Math.min(100, (progress / duration) * 100) : 0}
+            aria-label="تقدّم الآية"
+            sx={{ height: 6, borderRadius: 999, mb: 1.25, "& .MuiLinearProgress-bar": { borderRadius: 999 } }}
           />
           <Box
             dir="ltr"

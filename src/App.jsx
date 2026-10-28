@@ -62,7 +62,7 @@ export default function App() {
   const [startVerse, setStartVerse] = useState(session.startVerse || 1);
   const [endVerse, setEndVerse] = useState(session.endVerse || 7);
   const [verseRepeat, setVerseRepeat] = useState(session.verseRepeat || 1);
-  const [groupRepeat, setGroupRepeat] = useState(session.groupRepeat || 1);
+  const [groupRepeat, setGroupRepeat] = useState(session.groupRepeat ?? 1);
 
   useEffect(() => {
     if (!reciter || !surah) return;
@@ -288,6 +288,7 @@ export default function App() {
               progress={player.progress}
               duration={player.duration}
               loading={player.loading}
+              preparing={player.preparing}
               error={player.error}
               verseText={ayahsMap[player.currentVerse] || ''}
               reciter={reciter}
@@ -295,7 +296,6 @@ export default function App() {
               onPause={player.pause}
               onResume={player.resume}
               onStop={player.stop}
-              onSeek={player.seek}
               onSkipNext={player.skipNext}
               onSkipPrev={player.skipPrev}
             />

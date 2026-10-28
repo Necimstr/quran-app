@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getAyahAudioUrl } from '../services/apiService';
+import { buildProgram, nextStart, ProgramError } from '../services/recitationProgram';
+import { parseMp3 } from '../services/mp3';
 import {
   setMediaHandlers, setMediaMetadata, setMediaPlaybackState, setMediaPosition,
 } from '../services/mediaSession';
@@ -27,13 +29,14 @@ async function getCachedAudio(key) {
   });
 }
 
-async function setCachedAudio(key, blob) {
+// silent: skip the per-ayah change event (the player sends one after a whole batch)
+async function setCachedAudio(key, blob, { silent = false } = {}) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const req = tx.objectStore(STORE_NAME).put(blob, key);
     req.onsuccess = () => {
-      window.dispatchEvent(new CustomEvent('quran:cache-updated', { detail: { key } }));
+      if (!silent) window.dispatchEvent(new CustomEvent('quran:cache-updated', { detail: { key } }));
       resolve();
     };
     req.onerror = (e) => reject(e.target.error);
@@ -169,6 +172,7 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [preparing, setPreparing] = useState(null); // { done, total } while building a program
   const [error, setError] = useState(null);
   const [speed, setSpeedState] = useState(1);
   const [volume, setVolumeState] = useState(1);
@@ -180,13 +184,14 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
   }
   const stateRef = useRef({});
   const speedRef = useRef(1);
-  const playingRef = useRef(false); // a sequence is active (playing or paused)
-  const pausedRef = useRef(false); // user/system asked to pause mid-sequence
-  const transitionRef = useRef(false); // our own src swap/skip — ignore its 'pause' event
-  const stopRequestedRef = useRef(false);
-  const runIdRef = useRef(0);
-  const resolveCurrentPlayRef = useRef(null);
-  const objectUrlRef = useRef(null);
+  const playingRef = useRef(false); // a session is active (playing, paused or preparing)
+  const pausedRef = useRef(false); // the user paused; don't auto-start a freshly built program
+  const transitionRef = useRef(false); // our own src swap — ignore its 'pause' event
+  const runIdRef = useRef(0); // bumps on every build/stop; stale builds check it and bail
+  const programRef = useRef(null); // { url, segments, duration, pass, loopsPass }
+  const posRef = useRef({ seg: 0, lastT: 0, pass: 0 });
+  const parsedRef = useRef(new Map()); // verse audio parsed this session, for quick rebuilds
+  const newlyCachedRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = { reciter, surah, startVerse, endVerse, verseRepeat, groupRepeat };
@@ -197,10 +202,9 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
     setIsActive(active);
   }, []);
 
-  // Swaps the element source and revokes the previous blob URL
+  // Swaps the element source and revokes the previous program's blob URL
   const swapSrc = useCallback((audio, src) => {
-    const prev = objectUrlRef.current;
-    objectUrlRef.current = src && src.startsWith('blob:') ? src : null;
+    const prev = programRef.current?.url;
     if (src) {
       audio.src = src;
     } else {
@@ -210,52 +214,34 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
     if (prev && prev !== src) URL.revokeObjectURL(prev);
   }, []);
 
-  // Playing/paused state comes from the element itself, so OS-initiated pauses
-  // (calls, headset unplugged, lock-screen controls) stay in sync with the UI.
-  useEffect(() => {
-    const audio = audioRef.current;
-    audio.preload = 'auto';
-    const onTimeUpdate = () => setProgress(audio.currentTime);
-    const onDuration = () => {
-      setDuration(audio.duration);
-      setMediaPosition(audio);
-    };
-    const onPosition = () => setMediaPosition(audio);
-    const onPlay = () => {
-      setIsPlaying(true);
-      setMediaPlaybackState('playing');
-    };
-    const onPause = () => {
-      if (audio.ended || transitionRef.current || !playingRef.current) return;
-      setIsPlaying(false);
-      setMediaPlaybackState('paused');
-    };
-    audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.addEventListener('loadedmetadata', onDuration);
-    audio.addEventListener('durationchange', onDuration);
-    audio.addEventListener('ratechange', onPosition);
-    audio.addEventListener('seeked', onPosition);
-    audio.addEventListener('play', onPlay);
-    audio.addEventListener('pause', onPause);
-    return () => {
-      audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.removeEventListener('loadedmetadata', onDuration);
-      audio.removeEventListener('durationchange', onDuration);
-      audio.removeEventListener('ratechange', onPosition);
-      audio.removeEventListener('seeked', onPosition);
-      audio.removeEventListener('play', onPlay);
-      audio.removeEventListener('pause', onPause);
-    };
+  const updateLoop = useCallback(() => {
+    const program = programRef.current;
+    const { groupRepeat } = stateRef.current;
+    audioRef.current.loop = !!program?.loopsPass &&
+      (groupRepeat === 0 || posRef.current.pass < groupRepeat - 1);
   }, []);
 
-  const stop = useCallback(() => {
-    stopRequestedRef.current = true;
+  const applySegment = useCallback((idx) => {
+    const program = programRef.current;
+    const seg = program.segments[idx];
+    posRef.current.seg = idx;
+    setCurrentVerse(seg.verse);
+    setVerseCount(seg.rep);
+    setDuration(seg.end - seg.start);
+    setMediaPosition(audioRef.current, program.duration);
+  }, []);
+
+  // Fully ends the session; `message` is shown to the user when set
+  const reset = useCallback((message = null) => {
+    runIdRef.current++;
     pausedRef.current = false;
     transitionRef.current = false;
     const audio = audioRef.current;
     audio.pause();
+    audio.loop = false;
     swapSrc(audio, '');
-    resolveCurrentPlayRef.current?.({ type: 'stop' });
+    programRef.current = null;
+    parsedRef.current = new Map();
     setActive(false);
     setIsPlaying(false);
     setMediaPlaybackState('none');
@@ -265,8 +251,11 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
     setVerseCount(0);
     setGroupCount(0);
     setLoading(false);
-    setError(null);
+    setPreparing(null);
+    setError(message);
   }, [swapSrc, setActive]);
+
+  const stop = useCallback(() => reset(), [reset]);
 
   // Stop and reset when reciter or surah changes
   useEffect(() => {
@@ -276,6 +265,7 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
 
   const setSpeed = useCallback((s) => {
     speedRef.current = s;
+    audioRef.current.defaultPlaybackRate = s;
     audioRef.current.playbackRate = s;
     setSpeedState(s);
   }, []);
@@ -285,181 +275,171 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
     setVolumeState(v);
   }, []);
 
-  // Returns a promise that resolves when audio ends, errors, or is interrupted
-  const makeDoPlay = useCallback(() => {
-    return new Promise((resolve) => {
-      const audio = audioRef.current;
-      const finish = (result) => {
-        audio.removeEventListener('ended', onEnd);
-        audio.removeEventListener('error', onErr);
-        if (resolveCurrentPlayRef.current === finish) resolveCurrentPlayRef.current = null;
-        resolve(result);
-      };
-      const onEnd = () => finish({ type: 'ended' });
-      const onErr = () => finish({ type: 'error' });
-      audio.addEventListener('ended', onEnd);
-      audio.addEventListener('error', onErr);
-      resolveCurrentPlayRef.current = finish;
-    });
-  }, []);
-
-  const loadAudio = useCallback(async (reciter, surahNum, verseNum) => {
-    const key = await cacheKey(reciter, surahNum, verseNum);
-    const cached = await getCachedAudio(key);
-    if (cached) return { src: URL.createObjectURL(cached), cached: true };
-    if (!navigator.onLine) return { src: null, cached: false, offlineMiss: true };
-    return { src: getAyahAudioUrl(reciter, surahNum, verseNum), cached: false };
-  }, []);
-
-  const preloadVerse = useCallback(async (reciter, surahNum, verseNum) => {
-    if (!navigator.onLine) return;
-    try {
-      const key = await cacheKey(reciter, surahNum, verseNum);
-      const existing = await getCachedAudio(key);
-      if (existing) return;
-      const url = getAyahAudioUrl(reciter, surahNum, verseNum);
-      const res = await fetch(url);
-      if (res.ok) await setCachedAudio(key, await res.blob());
-    } catch { /* best-effort prefetch */ }
-  }, []);
-
-  const playSequence = useCallback(async () => {
-    const { reciter, surah } = stateRef.current;
-    if (!reciter || !surah) return;
-
-    const runId = ++runIdRef.current;
-    const cancelled = () => stopRequestedRef.current || runIdRef.current !== runId;
-
-    stopRequestedRef.current = false;
-    pausedRef.current = false;
-    transitionRef.current = false;
-    setActive(true);
-    setError(null);
-
-    let gCount = 0;
-    let consecutiveFailures = 0;
-
-    // Returns true when the sequence must stop, false to skip to the next verse
-    const handleFailure = (v) => {
-      if (!navigator.onLine) {
-        setError(`فقدان الاتصال — توقف التشغيل عند الآية ${v}`);
-        return true;
-      }
-      consecutiveFailures++;
-      if (consecutiveFailures >= 3) {
-        setError('تعذّر تحميل التلاوة — تحقق من الاتصال ثم أعد المحاولة');
-        return true;
-      }
-      setError(`تعذّر تحميل الآية ${v} — تم تخطيها`);
-      return false;
-    };
-
-    try {
-      outer: while (true) {
-        const { groupRepeat } = stateRef.current;
-        const infinite = groupRepeat === 0;
-        if (!infinite && gCount >= groupRepeat) break;
-
-        setGroupCount(gCount);
-        let v = stateRef.current.startVerse;
-
-        while (v <= stateRef.current.endVerse) {
-          if (cancelled()) break outer;
-          setCurrentVerse(v);
-
-          let nextV = v + 1;
-          let loaded = false; // the element already holds verse v
-          const { verseRepeat } = stateRef.current;
-
-          for (let r = 0; r < verseRepeat; r++) {
-            if (cancelled()) break outer;
-            setVerseCount(r);
-            if (!loaded) setLoading(true);
-            const audio = audioRef.current;
-            transitionRef.current = true;
-
-            try {
-              if (loaded) {
-                // Repeating the same verse: rewind instead of swapping src
-                audio.currentTime = 0;
-              } else {
-                const result = await loadAudio(reciter, surah.number, v);
-                if (cancelled()) {
-                  if (result.src?.startsWith('blob:')) URL.revokeObjectURL(result.src);
-                  break outer;
-                }
-                if (result.offlineMiss) {
-                  setError(`الآية ${v} غير محفوظة — توقف التشغيل (لا يوجد اتصال بالإنترنت)`);
-                  break outer;
-                }
-                swapSrc(audio, result.src);
-                loaded = true;
-              }
-              audio.playbackRate = speedRef.current;
-              // Paused while loading: keep the verse ready, resume() will start it
-              if (!pausedRef.current) await audio.play();
-              consecutiveFailures = 0;
-            } catch (err) {
-              if (cancelled()) break outer;
-              if (err?.name === 'NotAllowedError') {
-                // Browser/OS refused to start playback (e.g. iOS in background).
-                // Hold position; resume() — in-app or from the lock screen — continues.
-                pausedRef.current = true;
-                setIsPlaying(false);
-                setMediaPlaybackState('paused');
-                setError('أوقف النظام التشغيل مؤقتًا — اضغط تشغيل للمتابعة');
-              } else if (!(err?.name === 'AbortError' && pausedRef.current)) {
-                if (handleFailure(v)) break outer;
-                nextV = v + 1;
-                break;
-              }
-            } finally {
-              transitionRef.current = false;
-              setLoading(false);
-            }
-
-            // Preload next verse in background
-            if (r === 0 && v < stateRef.current.endVerse) preloadVerse(reciter, surah.number, v + 1);
-
-            const result = await makeDoPlay();
-            if (result.type === 'stop' || cancelled()) break outer;
-            if (result.type === 'skip-next') { nextV = Math.min(v + 1, stateRef.current.endVerse); break; }
-            if (result.type === 'skip-prev') { nextV = Math.max(stateRef.current.startVerse, v - 1); break; }
-            if (result.type === 'error') {
-              if (handleFailure(v)) break outer;
-              nextV = v + 1;
-              break;
-            }
-            // 'ended' — loop continues for next repeat
-          }
-
-          if (cancelled()) break outer;
-          v = nextV;
+  // Fetches (or reads from the device) and parses one ayah, memoised for the session
+  const getVerse = useCallback((reciter, surahNum, verseNum) => {
+    const key = `${reciter.id}:${surahNum}:${verseNum}`;
+    const memo = parsedRef.current.get(key);
+    if (memo) return memo;
+    const load = (async () => {
+      let blob = await getCachedAudio(key);
+      if (!blob) {
+        if (!navigator.onLine) {
+          throw new ProgramError(`الآية ${verseNum} غير محفوظة — لا يوجد اتصال بالإنترنت`);
         }
-
-        gCount++;
-        if (!infinite && gCount >= groupRepeat) break;
+        let res;
+        try {
+          res = await fetch(getAyahAudioUrl(reciter, surahNum, verseNum));
+        } catch {
+          throw new ProgramError(`تعذّر تحميل الآية ${verseNum} — تحقق من الاتصال ثم أعد المحاولة`);
+        }
+        if (!res.ok) throw new ProgramError(`تعذّر تحميل الآية ${verseNum} — حاول مرة أخرى`);
+        blob = await res.blob();
+        setCachedAudio(key, blob, { silent: true }).then(() => { newlyCachedRef.current = true; }, () => {});
       }
-    } catch { /* sequence aborted */ }
+      const parsed = parseMp3(await blob.arrayBuffer());
+      if (!parsed) throw new ProgramError(`تعذّر قراءة ملف الآية ${verseNum}`);
+      return parsed;
+    })();
+    parsedRef.current.set(key, load);
+    load.catch(() => parsedRef.current.delete(key));
+    return load;
+  }, []);
 
-    // A newer sequence (or stop()) already owns the state
-    if (runIdRef.current !== runId) return;
-    stopRequestedRef.current = true;
-    pausedRef.current = false;
-    transitionRef.current = false;
-    setActive(false);
-    setIsPlaying(false);
-    setMediaPlaybackState('none');
-    setLoading(false);
+  const startProgram = useCallback(async (program, autoplay) => {
+    const audio = audioRef.current;
+    transitionRef.current = true;
+    swapSrc(audio, program.url);
+    programRef.current = program;
+    posRef.current = { seg: 0, lastT: 0, pass: program.pass };
+    audio.defaultPlaybackRate = speedRef.current;
+    audio.playbackRate = speedRef.current;
+    updateLoop();
+    applySegment(0);
+    setGroupCount(program.pass);
     setProgress(0);
-    setDuration(0);
-    setVerseCount(0);
-    setGroupCount(0);
-  }, [loadAudio, makeDoPlay, preloadVerse, swapSrc, setActive]);
+    setPreparing(null);
+    setLoading(false);
+    if (!autoplay || pausedRef.current) {
+      transitionRef.current = false;
+      setIsPlaying(false);
+      setMediaPlaybackState('paused');
+      return;
+    }
+    try {
+      await audio.play();
+    } catch (err) {
+      if (err?.name === 'NotAllowedError') {
+        // The system refused to start audio without a tap. The program is ready, so one tap resumes.
+        pausedRef.current = true;
+        setIsPlaying(false);
+        setMediaPlaybackState('paused');
+        setError('التلاوة جاهزة — اضغط «متابعة» للاستماع');
+      }
+    } finally {
+      transitionRef.current = false;
+    }
+  }, [swapSrc, updateLoop, applySegment]);
+
+  // Builds the program that starts at `from` and plays it
+  const continueAt = useCallback(async (from, autoplay) => {
+    const { reciter, surah, startVerse, endVerse, verseRepeat } = stateRef.current;
+    if (!reciter || !surah) return;
+    const runId = ++runIdRef.current;
+    const cancelled = () => runIdRef.current !== runId;
+    setLoading(true);
+    newlyCachedRef.current = false;
+    try {
+      const program = await buildProgram({
+        from,
+        plan: { start: startVerse, end: endVerse, verseRepeat },
+        getVerse: (v) => getVerse(reciter, surah.number, v),
+        onProgress: (done, total) => { if (!cancelled()) setPreparing({ done, total }); },
+        isCancelled: cancelled,
+      });
+      if (!program) return;
+      if (cancelled()) { URL.revokeObjectURL(program.url); return; }
+      await startProgram(program, autoplay);
+    } catch (err) {
+      if (cancelled()) return;
+      reset(err instanceof ProgramError ? err.message : 'تعذّر تجهيز التلاوة — حاول مرة أخرى');
+    } finally {
+      if (newlyCachedRef.current) {
+        newlyCachedRef.current = false;
+        window.dispatchEvent(new CustomEvent('quran:cache-updated'));
+      }
+    }
+  }, [getVerse, startProgram, reset]);
+
+  // Playback state, ayah tracking and pass counting all come from the element itself
+  useEffect(() => {
+    const audio = audioRef.current;
+    audio.preload = 'auto';
+    const onTimeUpdate = () => {
+      const program = programRef.current;
+      if (!program) return;
+      const t = audio.currentTime;
+      const pos = posRef.current;
+      let idx = pos.seg;
+      let wrapped = false;
+      if (program.loopsPass && t + 1 < pos.lastT) {
+        // audio.loop jumped back to the start: a new pass of the range began
+        pos.pass++;
+        idx = 0;
+        wrapped = true;
+        setGroupCount(pos.pass);
+        updateLoop();
+      }
+      pos.lastT = t;
+      const segs = program.segments;
+      while (idx + 1 < segs.length && t >= segs[idx + 1].start) idx++;
+      if (idx !== pos.seg || wrapped) applySegment(idx);
+      setProgress(Math.max(0, t - segs[idx].start));
+    };
+    const onEnded = () => {
+      const program = programRef.current;
+      if (!program) return;
+      const { startVerse, endVerse, verseRepeat, groupRepeat } = stateRef.current;
+      const next = nextStart(program, posRef.current.pass, { start: startVerse, end: endVerse, verseRepeat }, groupRepeat);
+      if (next) continueAt(next, true);
+      else reset();
+    };
+    const onError = () => {
+      if (programRef.current && audio.getAttribute('src')) reset('تعذّر تشغيل التلاوة — حاول مرة أخرى');
+    };
+    const onPlay = () => {
+      setIsPlaying(true);
+      setMediaPlaybackState('playing');
+    };
+    const onPause = () => {
+      if (audio.ended || transitionRef.current || !playingRef.current) return;
+      setIsPlaying(false);
+      setMediaPlaybackState('paused');
+    };
+    const onRate = () => { if (programRef.current) setMediaPosition(audio, programRef.current.duration); };
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ratechange', onRate);
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ratechange', onRate);
+    };
+  }, [applySegment, updateLoop, continueAt, reset]);
 
   const play = useCallback(() => {
-    if (!playingRef.current) playSequence();
-  }, [playSequence]);
+    if (playingRef.current) return;
+    pausedRef.current = false;
+    setActive(true);
+    setError(null);
+    setGroupCount(0);
+    continueAt({ pass: 0, verse: stateRef.current.startVerse }, true);
+  }, [setActive, continueAt]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;
@@ -472,40 +452,46 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
   const resume = useCallback(() => {
     pausedRef.current = false;
     setError(null);
-    audioRef.current.play().catch(() => {});
+    // Still building: the program starts on its own when ready
+    if (programRef.current) audioRef.current.play().catch(() => {});
   }, []);
 
-  const skipNext = useCallback(() => {
-    if (!resolveCurrentPlayRef.current) return;
+  // Next/previous rebuild the program from the target ayah instead of seeking
+  const skipTo = useCallback((delta) => {
+    const program = programRef.current;
+    if (!playingRef.current || !program) return;
+    const { startVerse, endVerse } = stateRef.current;
+    const current = program.segments[posRef.current.seg]?.verse ?? startVerse;
+    const verse = Math.min(endVerse, Math.max(startVerse, current + delta));
     pausedRef.current = false;
-    transitionRef.current = true;
-    audioRef.current.pause();
-    resolveCurrentPlayRef.current({ type: 'skip-next' });
-  }, []);
+    continueAt({ pass: posRef.current.pass, verse }, true);
+  }, [continueAt]);
 
-  const skipPrev = useCallback(() => {
-    if (!resolveCurrentPlayRef.current) return;
-    pausedRef.current = false;
-    transitionRef.current = true;
-    audioRef.current.pause();
-    resolveCurrentPlayRef.current({ type: 'skip-prev' });
-  }, []);
+  const skipNext = useCallback(() => skipTo(1), [skipTo]);
+  const skipPrev = useCallback(() => skipTo(-1), [skipTo]);
 
-  const seek = useCallback((time) => {
-    audioRef.current.currentTime = time;
-    setProgress(time);
-  }, []);
+  // Range or ayah-repeat changed mid-session: rebuild from the current ayah.
+  // Debounced so tapping through options rebuilds once.
+  useEffect(() => {
+    if (!playingRef.current || !programRef.current) return;
+    const t = setTimeout(() => {
+      const program = programRef.current;
+      if (!playingRef.current || !program) return;
+      const { startVerse, endVerse } = stateRef.current;
+      const current = program.segments[posRef.current.seg]?.verse ?? startVerse;
+      const verse = current >= startVerse && current <= endVerse ? current : startVerse;
+      continueAt({ pass: posRef.current.pass, verse }, !audioRef.current.paused);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [startVerse, endVerse, verseRepeat, continueAt]);
 
-  const seekBy = useCallback((delta) => {
-    const audio = audioRef.current;
-    if (!Number.isFinite(audio.duration)) return;
-    seek(Math.min(Math.max(0, audio.currentTime + delta), audio.duration));
-  }, [seek]);
+  // Group repeat changed: only whether the file keeps looping changes
+  useEffect(() => { updateLoop(); }, [groupRepeat, updateLoop]);
 
   // Lock-screen / headset controls always call the latest commands
   const commandsRef = useRef({});
   useEffect(() => {
-    commandsRef.current = { play, pause, resume, stop, skipNext, skipPrev, seek, seekBy };
+    commandsRef.current = { play, pause, resume, stop, skipNext, skipPrev };
   });
 
   useEffect(() => setMediaHandlers({
@@ -514,9 +500,6 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
     stop: () => commandsRef.current.stop(),
     previoustrack: () => commandsRef.current.skipPrev(),
     nexttrack: () => commandsRef.current.skipNext(),
-    seekbackward: (d) => commandsRef.current.seekBy(-(d.seekOffset ?? 10)),
-    seekforward: (d) => commandsRef.current.seekBy(d.seekOffset ?? 10),
-    seekto: (d) => { if (Number.isFinite(d.seekTime)) commandsRef.current.seek(d.seekTime); },
   }), []);
 
   useEffect(() => {
@@ -527,10 +510,10 @@ export function useQuranPlayer({ reciter, surah, startVerse, endVerse, verseRepe
 
   return {
     isPlaying, isActive, currentVerse, verseCount, groupCount,
-    progress, duration, loading, error,
+    progress, duration, loading, preparing, error,
     speed, volume,
     play, pause, resume, stop,
-    skipNext, skipPrev, seek,
+    skipNext, skipPrev,
     setSpeed, setVolume,
   };
 }

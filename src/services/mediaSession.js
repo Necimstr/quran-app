@@ -47,9 +47,10 @@ export function setMediaPlaybackState(state) {
   try { navigator.mediaSession.playbackState = state; } catch { /* unsupported by this browser */ }
 }
 
-export function setMediaPosition(audio) {
+// duration: pass the known program length; a joined MP3's own estimate can be wrong
+export function setMediaPosition(audio, duration = audio.duration) {
   if (!supported || !navigator.mediaSession.setPositionState) return;
-  const { duration, currentTime, playbackRate } = audio;
+  const { currentTime, playbackRate } = audio;
   if (!Number.isFinite(duration) || duration <= 0) return;
   try {
     navigator.mediaSession.setPositionState({
